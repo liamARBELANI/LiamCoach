@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Bazelet';
+  src: url('./fonts/Regular-Bazelet.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: 40 33% 98%;
@@ -33,7 +41,11 @@
     --input: 28 10% 85%;
     --ring: 20 86% 46%;
 
-    --radius: 0.375rem;
+    --radius: 0.5rem;
+
+    /* Glow colors */
+    --glow-primary: hsla(20, 86%, 46%, 0.12);
+    --glow-primary-strong: hsla(20, 86%, 46%, 0.22);
   }
 
   .dark {
@@ -64,6 +76,9 @@
     --border: 24 7% 19%;
     --input: 24 7% 21%;
     --ring: 22 88% 52%;
+
+    --glow-primary: hsla(22, 88%, 52%, 0.14);
+    --glow-primary-strong: hsla(22, 88%, 52%, 0.28);
   }
 }
 
@@ -88,11 +103,203 @@
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Inputs that hold LTR data stay aligned to the start (right edge in RTL) */
-  input[dir='ltr'],
-  textarea[dir='ltr'] {
-    text-align: start;
+  /* ── RTL: all text inputs inherit the document direction (RTL) ── */
+  /* Number inputs stay LTR via explicit dir="ltr" on the element */
+  input:not([type='number']):not([dir='ltr']),
+  textarea:not([dir='ltr']) {
+    direction: rtl;
+    text-align: right;
   }
+
+  /* Number inputs: LTR content, hide spinner arrows that block content */
+  input[type='number'] {
+    direction: ltr;
+    text-align: left;
+    -moz-appearance: textfield;
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Phone input: LTR digits, but keep RTL placeholder until focused */
+  input[type='tel'],
+  input[data-ltr='true'] {
+    direction: ltr;
+    text-align: left;
+  }
+
+  /* Placeholder text for RTL inputs */
+  input:not([type='number']):not([dir='ltr'])::placeholder,
+  textarea:not([dir='ltr'])::placeholder {
+    text-align: right;
+    direction: rtl;
+  }
+}
+
+/* ── Ambient background gradient ─────────────────────────────────────────── */
+.intake-bg {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, var(--glow-primary-strong) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 90% 80%, var(--glow-primary) 0%, transparent 60%),
+    hsl(var(--background));
+  background-attachment: fixed;
+}
+
+/* ── Card glass shell ─────────────────────────────────────────────────────── */
+.card-glass {
+  background: hsl(var(--card) / 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.7);
+  box-shadow:
+    0 4px 24px -4px hsl(var(--foreground) / 0.06),
+    0 1px 3px hsl(var(--foreground) / 0.04),
+    inset 0 1px 0 hsl(var(--card) / 0.9);
+}
+
+/* ── Icon glow ────────────────────────────────────────────────────────────── */
+.icon-glow {
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--glow-primary-strong) 0%,
+    hsl(var(--primary) / 0.08) 60%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 0 1px hsl(var(--primary) / 0.12),
+    0 8px 24px hsl(var(--primary) / 0.18),
+    inset 0 1px 0 hsl(0 0% 100% / 0.15);
+}
+
+/* ── Pill button ──────────────────────────────────────────────────────────── */
+.pill-option {
+  transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.pill-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px hsl(var(--primary) / 0.15);
+}
+.pill-option-active {
+  box-shadow:
+    0 4px 16px hsl(var(--primary) / 0.3),
+    0 0 0 1px hsl(var(--primary) / 0.5);
+  transform: scale(1.03);
+}
+
+/* ── Input focus lift ─────────────────────────────────────────────────────── */
+input:not([type='number']),
+textarea {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+input:not([type='number']):focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.15);
+}
+
+/* ── Shimmer animation ────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* ── Confetti particles (SuccessPage) ─────────────────────────────────────── */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-120px) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg) scale(0.6);
+    opacity: 0;
+  }
+}
+@keyframes confetti-sway {
+  0%,
+  100% {
+    margin-left: 0;
+  }
+  25% {
+    margin-left: 20px;
+  }
+  75% {
+    margin-left: -20px;
+  }
+}
+
+.confetti-piece {
+  position: fixed;
+  top: -20px;
+  border-radius: 2px;
+  animation:
+    confetti-fall linear forwards,
+    confetti-sway ease-in-out infinite;
+}
+
+/* ── Success check mark ────────────────────────────────────────────────────── */
+@keyframes check-draw {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes circle-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.check-circle {
+  animation: circle-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.check-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: check-draw 0.4s ease forwards 0.45s;
+}
+
+/* ── Float animation for icon ─────────────────────────────────────────────── */
+@keyframes float-bob {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* ── Gradient button shimmer on hover ─────────────────────────────────────── */
+@keyframes btn-glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 4px 20px hsl(var(--primary) / 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 32px hsl(var(--primary) / 0.55);
+  }
+}
+.btn-glow:hover {
+  animation: btn-glow-pulse 1.8s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

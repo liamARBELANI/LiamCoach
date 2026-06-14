@@ -13,7 +13,7 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['Heebo', 'Assistant', 'system-ui', 'sans-serif'],
+        sans: ['Bazelet', 'Heebo', 'Assistant', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

@@ -4,6 +4,7 @@ const dateFmt = new Intl.DateTimeFormat('he-IL', {
   year: 'numeric',
 });
 
-export function formatDate(epochMs: number): string {
+export function formatDate(epochMs?: number | null): string {
+  if (!epochMs) return 'תאריך לא ידוע';
   return dateFmt.format(new Date(epochMs));
 }
