@@ -86,7 +86,9 @@ export default function AdminDashboard() {
       .filter((c) => {
         if (q) {
           const inName = c.intake?.fullName?.toLowerCase()?.includes(q) ?? false;
-          const inPhone = c.intake?.phone?.includes(q.replace(/\D/g, '')) ?? false;
+          const inPhone = String(c.intake?.phone || '')
+            .replace(/\D/g, '')
+            .includes(q.replace(/\D/g, ''));
           if (!inName && !inPhone) return false;
         }
         if (filterStatus && c.status !== filterStatus) return false;
