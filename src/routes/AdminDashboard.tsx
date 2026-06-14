@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Header } from '@/components/common/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SignOutButton } from '@/components/admin/SignOutButton';
 import { useClients } from '@/hooks/clients';
 import { formatDate } from '@/lib/format';
 import { formatILMobile } from '@/lib/phone';
@@ -11,7 +12,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-dvh">
-      <Header subtitle="לוח בקרה" />
+      <Header subtitle="לוח בקרה" actions={<SignOutButton />} />
       <main className="container py-8">
         <h1 className="mb-6 text-2xl font-bold">מתאמנים</h1>
 

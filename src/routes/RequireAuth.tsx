@@ -1,10 +1,21 @@
 import type { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/auth';
 
-/**
- * Auth guard for /admin routes.
- * TODO (M5): redirect unauthenticated users to /login using the auth hook.
- * For now it renders children so the admin shell is reachable during early milestones.
- */
 export function RequireAuth({ children }: { children: ReactNode }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 }
