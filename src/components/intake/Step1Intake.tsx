@@ -1,32 +1,110 @@
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import {
+  User,
+  Heart,
+  Zap,
+  Target,
+  Dumbbell,
+  Star,
+  CheckCircle2,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { intakeSchema } from '@/schemas/intake';
 import type { IntakeValues } from '@/schemas/intake';
 import { TRAINING_LOCATIONS } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  SectionHeading,
   TextField,
   TextareaField,
   NumberField,
-  YesNoField,
-  RadioGroupField,
+  PillRadioField,
+  PillYesNoField,
 } from './fields';
 import { GoalImageUpload } from './GoalImageUpload';
+import { CardShell } from './CardShell';
 
-// RHF internal form state uses strings for all inputs; Zod resolver outputs IntakeValues.
-// We type the form as FieldValues internally and cast the validated output.
 type FormState = Record<string, unknown>;
+
+interface CardMeta {
+  id: string;
+  Icon: LucideIcon;
+  headline: string;
+  subtitle: string;
+  validationFields: string[];
+}
+
+export const STEP1_CARDS: CardMeta[] = [
+  {
+    id: 'intro',
+    Icon: User,
+    headline: '!ברוכ/ה הבא/ה',
+    subtitle: 'בוא נכיר אחד את השני — קצת פרטים בסיסיים כדי להתחיל',
+    validationFields: ['fullName', 'phone'],
+  },
+  {
+    id: 'medical',
+    Icon: Heart,
+    headline: 'קודם — בריאות',
+    subtitle: 'כמה שאלות בסיסיות כדי שהתוכנית תתאים לך בדיוק',
+    validationFields: ['medicallyFit', 'takesMedication', 'medicationDetails', 'injuriesLimitations'],
+  },
+  {
+    id: 'sports',
+    Icon: Zap,
+    headline: 'ספר לי על הספורט שלך',
+    subtitle: 'לא משנה מה הרקע שלך — כל נקודת התחלה מושלמת',
+    validationFields: ['athleticBackground', 'sportLastYear'],
+  },
+  {
+    id: 'goals',
+    Icon: Target,
+    headline: '?מה אתה שם לעצמך',
+    subtitle: 'כדי לעזור לך להגיע לשם — אני צריך להבין לאן אתה רוצה להגיע',
+    validationFields: ['whyChangeNow', 'goal'],
+  },
+  {
+    id: 'training',
+    Icon: Dumbbell,
+    headline: '!בוא נבנה לך תוכנית',
+    subtitle: 'איך אתה מדמיין את עצמך מתאמן?',
+    validationFields: ['daysPerWeek', 'trainingLocation', 'homeEquipmentDetails'],
+  },
+  {
+    id: 'referral',
+    Icon: Star,
+    headline: '?איך הגעת אלי',
+    subtitle: 'סיפור ההכרות שלנו — חשוב לי לדעת',
+    validationFields: ['referralSource', 'whyMe', 'followDuration'],
+  },
+  {
+    id: 'terms',
+    Icon: CheckCircle2,
+    headline: '!כמעט שם',
+    subtitle: 'אישור אחד קטן ואנחנו מתקדמים לשלב הבא',
+    validationFields: ['termsAccepted'],
+  },
+];
 
 interface Step1IntakeProps {
   defaultValues: Partial<IntakeValues>;
   onChange: (values: Partial<IntakeValues>) => void;
-  onNext: (values: IntakeValues, goalImageFile: File | null) => void;
+  cardIdx: number;
+  onNextCard: () => void;
+  onFinish: (values: IntakeValues, goalImageFile: File | null) => void;
 }
 
-export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProps) {
+export function Step1Intake({
+  defaultValues,
+  onChange,
+  cardIdx,
+  onNextCard,
+  onFinish,
+}: Step1IntakeProps) {
   const [goalImageFile, setGoalImageFile] = useState<File | null>(null);
 
   const methods = useForm<FormState>({
@@ -38,29 +116,44 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
     mode: 'onBlur',
   });
 
-  const { handleSubmit, watch, formState: { errors } } = methods;
+  const { handleSubmit, trigger, watch, formState: { errors } } = methods;
 
   // Persist draft on every change
   const values = watch();
   useEffect(() => {
     onChange(values as Partial<IntakeValues>);
-  }, [values, onChange]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values]);
 
-  const takesMedication = useWatch({ control: methods.control, name: 'takesMedication' });
-  const trainingLocation = useWatch({ control: methods.control, name: 'trainingLocation' });
+  const takesMedication = useWatch({ control: methods.control, name: 'takesMedication' }) as string;
+  const trainingLocation = useWatch({ control: methods.control, name: 'trainingLocation' }) as string;
 
-  function onSubmit(data: FormState) {
-    onNext(data as unknown as IntakeValues, goalImageFile);
+  const card = STEP1_CARDS[cardIdx];
+  const isLastCard = cardIdx === STEP1_CARDS.length - 1;
+
+  function onFormSubmit(data: FormState) {
+    onFinish(data as unknown as IntakeValues, goalImageFile);
   }
 
-  return (
-    <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-8">
+  async function handleContinue() {
+    const valid = await trigger(card.validationFields);
+    if (!valid) return;
 
-        {/* פרטים אישיים */}
-        <section>
-          <SectionHeading>פרטים אישיים</SectionHeading>
-          <div className="space-y-4">
+    if (!isLastCard) {
+      onNextCard();
+      return;
+    }
+
+    handleSubmit(onFormSubmit, () => {
+      toast.error('יש שגיאות בטופס. אנא בדוק את כל השלבים.');
+    })();
+  }
+
+  function renderFields() {
+    switch (cardIdx) {
+      case 0:
+        return (
+          <>
             <TextField<FormState>
               name="fullName"
               label="שם מלא"
@@ -73,19 +166,18 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               placeholder="050-0000000"
               required
             />
-          </div>
-        </section>
+          </>
+        );
 
-        {/* רקע רפואי */}
-        <section>
-          <SectionHeading>רקע רפואי</SectionHeading>
-          <div className="space-y-4">
-            <YesNoField<FormState>
+      case 1:
+        return (
+          <>
+            <PillYesNoField<FormState>
               name="medicallyFit"
               label="האם אתה מאושר רפואית לפעילות גופנית?"
               required
             />
-            <YesNoField<FormState>
+            <PillYesNoField<FormState>
               name="takesMedication"
               label="האם אתה נוטל תרופות?"
               required
@@ -103,13 +195,12 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               label="פציעות או מגבלות רפואיות"
               placeholder="אם אין — השאר ריק"
             />
-          </div>
-        </section>
+          </>
+        );
 
-        {/* רקע ספורטיבי */}
-        <section>
-          <SectionHeading>רקע ספורטיבי</SectionHeading>
-          <div className="space-y-4">
+      case 2:
+        return (
+          <>
             <TextareaField<FormState>
               name="athleticBackground"
               label="רקע ספורטיבי"
@@ -120,13 +211,12 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               label="ספורט שעשית בשנה האחרונה"
               placeholder="תדירות, סוג פעילות..."
             />
-          </div>
-        </section>
+          </>
+        );
 
-        {/* מטרות */}
-        <section>
-          <SectionHeading>מטרות</SectionHeading>
-          <div className="space-y-4">
+      case 3:
+        return (
+          <>
             <TextareaField<FormState>
               name="whyChangeNow"
               label="למה החלטת להתחיל עכשיו?"
@@ -138,13 +228,12 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               placeholder="תאר את המטרה הפיזית / בריאותית שלך..."
             />
             <GoalImageUpload onChange={setGoalImageFile} />
-          </div>
-        </section>
+          </>
+        );
 
-        {/* אימונים */}
-        <section>
-          <SectionHeading>אימונים</SectionHeading>
-          <div className="space-y-4">
+      case 4:
+        return (
+          <>
             <NumberField<FormState>
               name="daysPerWeek"
               label="כמה ימים בשבוע תרצה להתאמן?"
@@ -152,12 +241,11 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               required
               unit="ימים"
             />
-            <RadioGroupField<FormState>
+            <PillRadioField<FormState>
               name="trainingLocation"
               label="היכן תרצה להתאמן?"
               options={TRAINING_LOCATIONS}
               required
-              inline
             />
             {trainingLocation === 'בית' && (
               <TextareaField<FormState>
@@ -177,13 +265,12 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               label="הערות מיוחדות לאימון"
               placeholder="כל מה שחשוב שאדע..."
             />
-          </div>
-        </section>
+          </>
+        );
 
-        {/* שיווק */}
-        <section>
-          <SectionHeading>הכרות</SectionHeading>
-          <div className="space-y-4">
+      case 5:
+        return (
+          <>
             <TextField<FormState>
               name="referralSource"
               label="איך שמעת עלי?"
@@ -199,12 +286,12 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               label="כמה זמן אתה עוקב אחרי?"
               placeholder="שבוע, חודשיים, שנה..."
             />
-          </div>
-        </section>
+          </>
+        );
 
-        {/* תקנון */}
-        <section>
-          <div className="rounded-md border border-border bg-muted/30 p-4">
+      case 6:
+        return (
+          <div className="rounded-xl border border-border bg-muted/30 p-5">
             <label className="flex cursor-pointer items-start gap-3">
               <Checkbox
                 {...methods.register('termsAccepted')}
@@ -221,11 +308,29 @@ export function Step1Intake({ defaultValues, onChange, onNext }: Step1IntakeProp
               </p>
             )}
           </div>
-        </section>
+        );
 
-        <Button type="submit" className="w-full" size="lg">
-          המשך לשלב 2
-        </Button>
+      default:
+        return null;
+    }
+  }
+
+  return (
+    <FormProvider {...methods}>
+      <form noValidate>
+        <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
+          {renderFields()}
+          <motion.div whileTap={{ scale: 0.97 }} className="pt-2">
+            <Button
+              type="button"
+              onClick={handleContinue}
+              className="w-full"
+              size="lg"
+            >
+              {isLastCard ? 'המשך לשלב 2' : 'המשך'}
+            </Button>
+          </motion.div>
+        </CardShell>
       </form>
     </FormProvider>
   );

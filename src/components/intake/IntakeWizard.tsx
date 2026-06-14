@@ -7,17 +7,16 @@ import type { NutritionValues } from '@/schemas/nutrition';
 import type { IntakeForm, NutritionForm } from '@/types';
 import { useCreateClient } from '@/hooks/clients';
 import { useIntakeDraft } from '@/hooks/useIntakeDraft';
-import { ProgressBar } from './ProgressBar';
-import { Step1Intake } from './Step1Intake';
-import { Step2Nutrition } from './Step2Nutrition';
+import { ProgressDots } from './ProgressDots';
+import { Step1Intake, STEP1_CARDS } from './Step1Intake';
+import { Step2Nutrition, STEP2_CARDS } from './Step2Nutrition';
 
-const variants = {
-  enter: (dir: number) => ({ x: dir > 0 ? '40%' : '-40%', opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit: (dir: number) => ({ x: dir > 0 ? '-40%' : '40%', opacity: 0 }),
+const cardVariants = {
+  enter: (dir: number) => ({ y: dir > 0 ? 48 : -48, opacity: 0 }),
+  center: { y: 0, opacity: 1 },
+  exit: (dir: number) => ({ y: dir > 0 ? -32 : 32, opacity: 0 }),
 };
-
-const transition = { duration: 0.28, ease: [0.4, 0, 0.2, 1] as const };
+const cardTransition = { duration: 0.32, ease: [0.4, 0, 0.2, 1] as const };
 
 export function IntakeWizard() {
   const navigate = useNavigate();
@@ -25,41 +24,50 @@ export function IntakeWizard() {
   const createClient = useCreateClient();
 
   const [step, setStep] = useState<1 | 2>(1);
+  const [cardIdx, setCardIdx] = useState(0);
   const [direction, setDirection] = useState(1);
   const [step1Data, setStep1Data] = useState<IntakeValues | null>(null);
   const [goalImageFile, setGoalImageFile] = useState<File | null>(null);
 
+  const totalCards = step === 1 ? STEP1_CARDS.length : STEP2_CARDS.length;
+
   const handleStep1Change = useCallback(
-    (values: Partial<IntakeValues>) => {
-      saveStep1(values);
-    },
+    (values: Partial<IntakeValues>) => saveStep1(values),
     [saveStep1],
   );
-
   const handleStep2Change = useCallback(
-    (values: Partial<NutritionValues>) => {
-      saveStep2(values);
-    },
+    (values: Partial<NutritionValues>) => saveStep2(values),
     [saveStep2],
   );
 
-  function goToStep2(data: IntakeValues, imageFile: File | null) {
-    setStep1Data(data);
-    setGoalImageFile(imageFile);
-    setDirection(1);
-    setStep(2);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function advance(newCardIdx: number, newStep?: 1 | 2) {
+    const movingForward = newStep ? newStep > step : newCardIdx > cardIdx;
+    setDirection(movingForward ? 1 : -1);
+    if (newStep) setStep(newStep);
+    setCardIdx(newCardIdx);
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }
 
-  function goBack() {
-    setDirection(-1);
-    setStep(1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function handleNextCard() {
+    advance(cardIdx + 1);
+  }
+
+  function handleBack() {
+    if (cardIdx > 0) {
+      advance(cardIdx - 1);
+    } else if (step === 2) {
+      advance(STEP1_CARDS.length - 1, 1);
+    }
+  }
+
+  function handleStep1Finish(data: IntakeValues, imageFile: File | null) {
+    setStep1Data(data);
+    setGoalImageFile(imageFile);
+    advance(0, 2);
   }
 
   async function handleFinalSubmit(nutritionData: NutritionValues) {
     if (!step1Data) return;
-
     try {
       await createClient.mutateAsync({
         intake: step1Data as unknown as IntakeForm,
@@ -73,46 +81,50 @@ export function IntakeWizard() {
     }
   }
 
-  return (
-    <div className="relative overflow-hidden">
-      <ProgressBar step={step} total={2} />
+  const showBack = cardIdx > 0 || step === 2;
 
+  return (
+    <div className="min-h-dvh">
+      {/* Sticky progress nav */}
+      <div className="sticky top-0 z-10">
+        <ProgressDots
+          step={step}
+          cardIdx={cardIdx}
+          totalCards={totalCards}
+          onBack={showBack ? handleBack : undefined}
+        />
+      </div>
+
+      {/* Animated card area */}
       <AnimatePresence mode="wait" custom={direction} initial={false}>
-        {step === 1 ? (
-          <motion.div
-            key="step1"
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={transition}
-          >
+        <motion.div
+          key={`${step}-${cardIdx}`}
+          custom={direction}
+          variants={cardVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={cardTransition}
+        >
+          {step === 1 ? (
             <Step1Intake
               defaultValues={getStep1()}
               onChange={handleStep1Change}
-              onNext={goToStep2}
+              cardIdx={cardIdx}
+              onNextCard={handleNextCard}
+              onFinish={handleStep1Finish}
             />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="step2"
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={transition}
-          >
+          ) : (
             <Step2Nutrition
               defaultValues={getStep2()}
               onChange={handleStep2Change}
+              cardIdx={cardIdx}
+              onNextCard={handleNextCard}
               onSubmit={handleFinalSubmit}
-              onBack={goBack}
               isSubmitting={createClient.isPending}
             />
-          </motion.div>
-        )}
+          )}
+        </motion.div>
       </AnimatePresence>
     </div>
   );

@@ -1,7 +1,3 @@
-/**
- * RHF-bound field wrappers used inside intake step forms.
- * Each component composes Label + primitive + error message.
- */
 import { useFormContext, type FieldPath, type FieldValues } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -227,6 +223,58 @@ export function RadioGroupField<T extends FieldValues>({
       </div>
       <FieldError message={error} />
     </div>
+  );
+}
+
+// ── Pill radio group (card-style toggle buttons) ───────────────────────────
+export function PillRadioField<T extends FieldValues>({
+  name,
+  label,
+  options,
+  required,
+}: RadioGroupFieldProps<T>) {
+  const {
+    register,
+    watch,
+    formState: { errors },
+  } = useFormContext<T>();
+  const currentValue = watch(name) as string | undefined;
+  const error = errors[name]?.message as string | undefined;
+  return (
+    <div>
+      <Label required={required}>{label}</Label>
+      <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
+        {options.map((opt) => (
+          <label
+            key={opt}
+            className={cn(
+              'flex cursor-pointer select-none items-center rounded-lg border px-4 py-2.5 text-sm transition-all duration-150',
+              currentValue === opt
+                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                : 'border-border bg-card text-foreground hover:border-primary/50',
+            )}
+          >
+            <input type="radio" value={opt} className="sr-only" {...register(name)} />
+            {opt}
+          </label>
+        ))}
+      </div>
+      <FieldError message={error} />
+    </div>
+  );
+}
+
+const YES_NO = ['כן', 'לא'] as const;
+
+// ── Pill yes/no ────────────────────────────────────────────────────────────
+export function PillYesNoField<T extends FieldValues>({ name, label, required }: YesNoFieldProps<T>) {
+  return (
+    <PillRadioField<T>
+      name={name}
+      label={label}
+      options={YES_NO as unknown as readonly string[]}
+      required={required}
+    />
   );
 }
 
