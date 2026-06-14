@@ -185,15 +185,24 @@ export function Step2Nutrition({
   async function handleContinue() {
     // On the last card, validate the ENTIRE form (no args) so required
     // fields from earlier cards can't be silently skipped.
-    const valid = isLastCard
+    let valid = isLastCard
       ? await trigger()
       : await trigger(card.validationFields);
+
+    const data = methods.getValues();
+    if (cardIdx === 7 && data.primaryGoal === 'אחר' && !String(data.primaryGoalOther || '').trim()) {
+      methods.setError('primaryGoalOther', { type: 'manual', message: 'יש לפרט את המטרה' });
+      valid = false;
+    }
+
     if (!valid) {
       if (isLastCard) {
         const errorKeys = Object.keys(methods.formState.errors)
-          .map(k => `[${k}]`)
+          .map((k) => `[${k}]`)
           .join(', ');
         toast.error(`יש שדות חובה שלא מולאו ${errorKeys}. חזור ובדוק את כל השלבים.`);
+      } else {
+        toast.error('יש למלא את שדות החובה בכרטיס זה.');
       }
       return;
     }
@@ -231,14 +240,14 @@ export function Step2Nutrition({
             {isStudying(occupationStatus) && (
               <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">לימודים</p>
-                <TextField<FormState> name="studyField" label="תחום לימודים" placeholder="הנדסת תוכנה, ביולוגיה..." />
-                <TextField<FormState> name="studyYear" label="שנת לימודים" placeholder="שנה א׳, שנה ג׳..." />
+                <TextField<FormState> name="studyField" label="תחום לימודים" />
+                <TextField<FormState> name="studyYear" label="שנת לימודים" />
               </div>
             )}
             {isWorking(occupationStatus) && (
               <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">עבודה</p>
-                <TextField<FormState> name="workField" label="תחום עבודה" placeholder="מחשבים, בנייה, חינוך..." />
+                <TextField<FormState> name="workField" label="תחום עבודה" />
                 <PillRadioField<FormState> name="workNature" label="אופי העבודה" options={WORK_NATURES} />
                 <PillRadioField<FormState> name="eatingAtWork" label="איפה אתה אוכל בעבודה?" options={EATING_AT_WORK} />
                 <div className="grid grid-cols-2 gap-4">
@@ -253,15 +262,15 @@ export function Step2Nutrition({
       case 2:
         return (
           <>
-            <TextareaField<FormState> name="hobbies" label="תחביבים ופעילויות פנאי" placeholder="טיולים, ציור, מוזיקה..." />
-            <TextField<FormState> name="dailyActivityLevel" label="רמת פעילות יומית (מחוץ לאימונים)" placeholder="יושב רוב היום, הולך הרבה, פעיל מאוד..." />
+            <TextareaField<FormState> name="hobbies" label="תחביבים ופעילויות פנאי" />
+            <TextField<FormState> name="dailyActivityLevel" label="רמת פעילות יומית (מחוץ לאימונים)" />
           </>
         );
 
       case 3:
         return (
           <div className="space-y-5">
-            <TextField<FormState> name="sleepWakeTimes" label="שעות שינה והשכמה בדרך כלל" placeholder="23:30 - 07:00" />
+            <TextField<FormState> name="sleepWakeTimes" label="שעות שינה והשכמה בדרך כלל" />
             <SelectNumberField<FormState> name="sleepHours" label="כמה שעות אתה ישן בלילה?" required unit="שעות" min={1} max={24} />
           </div>
         );
@@ -270,8 +279,8 @@ export function Step2Nutrition({
         return (
           <div className="space-y-5">
             <SelectNumberField<FormState> name="mealsPerDay" label="כמה ארוחות אתה אוכל ביום?" required unit="ארוחות" min={1} max={12} />
-            <TextareaField<FormState> name="whenHungry" label="באילו שעות אתה רעב במיוחד?" placeholder="אחר הצהריים, שעות הלילה..." />
-            <TextField<FormState> name="waterPerDay" label="כמה מים אתה שותה ביום בערך?" placeholder="ליטר וחצי, 4 כוסות..." />
+            <TextareaField<FormState> name="whenHungry" label="באילו שעות אתה רעב במיוחד?" />
+            <TextField<FormState> name="waterPerDay" label="כמה מים אתה שותה ביום בערך?" />
           </div>
         );
 
@@ -280,15 +289,15 @@ export function Step2Nutrition({
           <>
             <PillRadioField<FormState> name="dietType" label="סוג תזונה" options={DIET_TYPES} required />
             <PillYesNoField<FormState> name="keepsKosher" label="האם אתה שומר כשרות?" />
-            <TextareaField<FormState> name="allergies" label="אלרגיות / רגישויות למזון" placeholder="לוקטוז, גלוטן, בוטנים..." />
+            <TextareaField<FormState> name="allergies" label="אלרגיות / רגישויות למזון" />
           </>
         );
 
       case 6:
         return (
           <>
-            <TextareaField<FormState> name="enjoyedFoods" label="מאכלים שאתה אוהב במיוחד" placeholder="פסטה, בשר, שוקולד..." />
-            <TextareaField<FormState> name="dislikedFoods" label="מאכלים שאתה לא מוכן לאכול" placeholder="ברוקולי, טונה..." />
+            <TextareaField<FormState> name="enjoyedFoods" label="מאכלים שאתה אוהב במיוחד" />
+            <TextareaField<FormState> name="dislikedFoods" label="מאכלים שאתה לא מוכן לאכול" />
           </>
         );
 
@@ -297,7 +306,7 @@ export function Step2Nutrition({
           <>
             <PillRadioField<FormState> name="primaryGoal" label="מה המטרה התזונתית שלך?" options={PRIMARY_GOALS} required />
             {primaryGoal === 'אחר' && (
-              <TextareaField<FormState> name="primaryGoalOther" label="פרט את המטרה שלך" placeholder="לעלות במשקל, להשתתף בתחרות..." required />
+              <TextareaField<FormState> name="primaryGoalOther" label="פרט את המטרה שלך" required />
             )}
           </>
         );
@@ -316,23 +325,23 @@ export function Step2Nutrition({
       case 9:
         return (
           <>
-            <TextareaField<FormState> name="dailyNutritionRoutine" label="איך נראית התזונה שלך ביום רגיל?" placeholder="בוקר קפה ומאפה, צהריים בעבודה..." rows={4} />
-            <TextareaField<FormState> name="foodsWontEat" label="מאכלים שלעולם לא תאכל" placeholder="דגים נאים, איברים פנימיים..." />
+            <TextareaField<FormState> name="dailyNutritionRoutine" label="איך נראית התזונה שלך ביום רגיל?" rows={4} />
+            <TextareaField<FormState> name="foodsWontEat" label="מאכלים שלעולם לא תאכל" />
           </>
         );
 
       case 10:
         return (
           <>
-            <TextareaField<FormState> name="mustHaveFoods" label="מאכלים שחייבים להיות בתפריט שלך" placeholder="לפחות קוביית שוקולד אחת ביום..." />
-            <TextareaField<FormState> name="eatingOut" label="תדירות אכילה בחוץ" placeholder="פעם בשבוע, כל צהריים..." />
-            <TextareaField<FormState> name="snacking" label="נשנושים" placeholder="בין ארוחות, מול הטלוויזיה..." />
+            <TextareaField<FormState> name="mustHaveFoods" label="מאכלים שחייבים להיות בתפריט שלך" />
+            <TextareaField<FormState> name="eatingOut" label="תדירות אכילה בחוץ" />
+            <TextareaField<FormState> name="snacking" label="נשנושים" />
           </>
         );
 
       case 11:
         return (
-          <TextareaField<FormState> name="supplements" label="תוספים שאתה לוקח כעת" placeholder="חלבון, ויטמין D, אומגה 3... אם אין — השאר ריק" />
+          <TextareaField<FormState> name="supplements" label="תוספים שאתה לוקח כעת" />
         );
 
       default:

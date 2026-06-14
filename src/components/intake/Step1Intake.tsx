@@ -156,16 +156,28 @@ export function Step1Intake({
   }
 
   async function handleContinue() {
-    const valid = isLastCard
+    let valid = isLastCard
       ? await trigger()
       : await trigger(card.validationFields);
-    
+
+    const data = methods.getValues();
+    if (cardIdx === 2 && data.takesMedication === 'כן' && !String(data.medicationDetails || '').trim()) {
+      methods.setError('medicationDetails', { type: 'manual', message: 'יש לפרט אילו תרופות' });
+      valid = false;
+    }
+    if (cardIdx === 6 && data.trainingLocation === 'בית' && !String(data.homeEquipmentDetails || '').trim()) {
+      methods.setError('homeEquipmentDetails', { type: 'manual', message: 'יש לפרט את הציוד הקיים בבית' });
+      valid = false;
+    }
+
     if (!valid) {
       if (isLastCard) {
         const errorKeys = Object.keys(methods.formState.errors)
-          .map(k => `[${k}]`)
+          .map((k) => `[${k}]`)
           .join(', ');
         toast.error(`יש שדות חובה שלא מולאו ${errorKeys}. חזור ובדוק את כל השלבים.`);
+      } else {
+        toast.error('יש למלא את שדות החובה בכרטיס זה.');
       }
       return;
     }
@@ -188,14 +200,16 @@ export function Step1Intake({
             <TextField<FormState>
               name="fullName"
               label="שם מלא"
-              placeholder="ישראל ישראלי"
+
               required
             />
             <TextField<FormState>
               name="phone"
-              label="מספר פלאפון"
-              placeholder="050-0000000"
+              label="טלפון נייד"
               required
+              type="tel"
+              inputMode="numeric"
+              dir="ltr"
             />
           </>
         );
@@ -211,7 +225,7 @@ export function Step1Intake({
             <TextareaField<FormState>
               name="injuriesLimitations"
               label="פציעות או מגבלות רפואיות"
-              placeholder="אם אין — השאר ריק"
+
             />
           </>
         );
@@ -228,7 +242,7 @@ export function Step1Intake({
               <TextareaField<FormState>
                 name="medicationDetails"
                 label="פרט אילו תרופות"
-                placeholder="שם התרופה, מינון, מתי נוטל..."
+
                 required
               />
             )}
@@ -241,12 +255,12 @@ export function Step1Intake({
             <TextareaField<FormState>
               name="athleticBackground"
               label="רקע ספורטיבי"
-              placeholder="ספורט שעשית בעבר, כמה שנים, רמה..."
+
             />
             <TextareaField<FormState>
               name="sportLastYear"
               label="ספורט שעשית בשנה האחרונה"
-              placeholder="תדירות, סוג פעילות..."
+
             />
           </>
         );
@@ -257,12 +271,12 @@ export function Step1Intake({
             <TextareaField<FormState>
               name="whyChangeNow"
               label="למה החלטת להתחיל עכשיו?"
-              placeholder="מה גרם לך לפנות אלי דווקא עכשיו?"
+
             />
             <TextareaField<FormState>
               name="goal"
               label="מה המטרה שלך?"
-              placeholder="תאר את המטרה הפיזית / בריאותית שלך..."
+
             />
           </>
         );
@@ -295,7 +309,7 @@ export function Step1Intake({
               <TextareaField<FormState>
                 name="homeEquipmentDetails"
                 label="פרט את הציוד הקיים בבית"
-                placeholder="משקולות, גומיות, מתח, מזרן..."
+
                 required
               />
             )}
@@ -308,12 +322,12 @@ export function Step1Intake({
             <TextareaField<FormState>
               name="cardioPreference"
               label="העדפות קרדיו"
-              placeholder="ריצה, אופניים, שחייה, אין העדפה..."
+
             />
             <TextareaField<FormState>
               name="specialNotes"
               label="הערות מיוחדות לאימון"
-              placeholder="כל מה שחשוב שאדע..."
+
             />
           </>
         );
@@ -324,17 +338,17 @@ export function Step1Intake({
             <TextField<FormState>
               name="referralSource"
               label="איך שמעת עלי?"
-              placeholder="חבר, אינסטגרם, גוגל..."
+
             />
             <TextareaField<FormState>
               name="whyMe"
               label="למה בחרת בי כמאמן?"
-              placeholder="מה משך אותך אלי דווקא?"
+
             />
             <TextField<FormState>
               name="followDuration"
               label="כמה זמן אתה עוקב אחרי?"
-              placeholder="שבוע, חודשיים, שנה..."
+
             />
           </>
         );

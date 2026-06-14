@@ -34,14 +34,18 @@ export function SectionHeading({ children }: { children: React.ReactNode }) {
 interface TextFieldProps<T extends FieldValues> {
   name: FieldPath<T>;
   label: string;
-  placeholder?: string;
   required?: boolean;
+  type?: React.HTMLInputTypeAttribute;
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
+  dir?: 'ltr' | 'rtl' | 'auto';
 }
 export function TextField<T extends FieldValues>({
   name,
   label,
-  placeholder,
   required,
+  type = 'text',
+  inputMode,
+  dir,
 }: TextFieldProps<T>) {
   const {
     register,
@@ -55,9 +59,11 @@ export function TextField<T extends FieldValues>({
       </Label>
       <Input
         id={name}
-        placeholder={placeholder}
+        type={type}
+        inputMode={inputMode}
+        dir={dir}
         aria-invalid={!!error}
-        className="mt-1.5"
+        className="mt-1.5 text-center"
         {...register(name)}
       />
       <FieldError message={error} />
@@ -76,7 +82,6 @@ interface TextareaFieldProps<T extends FieldValues> {
 export function TextareaField<T extends FieldValues>({
   name,
   label,
-  placeholder,
   required,
   rows,
 }: TextareaFieldProps<T>) {
@@ -92,10 +97,9 @@ export function TextareaField<T extends FieldValues>({
       </Label>
       <Textarea
         id={name}
-        placeholder={placeholder}
         rows={rows}
         aria-invalid={!!error}
-        className="mt-1.5"
+        className="mt-1.5 text-center"
         {...register(name)}
       />
       <FieldError message={error} />
@@ -116,7 +120,6 @@ interface NumberFieldProps<T extends FieldValues> {
 export function NumberField<T extends FieldValues>({
   name,
   label,
-  placeholder,
   required,
   unit,
 }: NumberFieldProps<T>) {
@@ -130,9 +133,7 @@ export function NumberField<T extends FieldValues>({
       <Label htmlFor={name} required={required}>
         {label}
       </Label>
-      {/* Wrapper: RTL — so "start" = right, "end" = left */}
       <div className="relative mt-1.5" dir="rtl">
-        {/* Unit badge sits on the LEFT (= logical end in RTL) */}
         {unit && (
           <span
             className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm font-medium text-muted-foreground"
@@ -141,19 +142,16 @@ export function NumberField<T extends FieldValues>({
             {unit}
           </span>
         )}
-        {/* Number input: LTR internally so digits go left→right, caret on right */}
         <Input
           id={name}
           type="number"
           dir="ltr"
           inputMode="numeric"
-          placeholder={placeholder}
           aria-invalid={!!error}
           className={cn(
-            'text-right', // digits right-aligned inside the LTR field looks natural in RTL
-            unit && 'ps-12', // push content away from the unit badge (start = right in RTL, but we flipped wrapper to RTL)
+            'text-center',
+            unit && 'ps-12',
           )}
-          style={{ textAlign: 'center' }}
           {...register(name)}
         />
       </div>
@@ -317,7 +315,6 @@ export function SelectField<T extends FieldValues>({
   name,
   label,
   options,
-  placeholder,
   required,
 }: SelectFieldProps<T>) {
   const {
@@ -330,12 +327,7 @@ export function SelectField<T extends FieldValues>({
       <Label htmlFor={name} required={required}>
         {label}
       </Label>
-      <Select id={name} aria-invalid={!!error} className="mt-1.5" {...register(name)}>
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
+      <Select id={name} aria-invalid={!!error} className="mt-1.5 text-center" {...register(name)}>
         {options.map((opt) => (
           <option key={opt} value={opt}>
             {opt}
@@ -367,7 +359,6 @@ export function SelectNumberField<T extends FieldValues>({
   step = 1,
   required,
   unit,
-  placeholder = 'בחר...',
 }: SelectNumberFieldProps<T>) {
   const {
     register,
@@ -385,10 +376,7 @@ export function SelectNumberField<T extends FieldValues>({
       <Label htmlFor={name} required={required}>
         {label}
       </Label>
-      <Select id={name} aria-invalid={!!error} className="mt-1.5" dir="ltr" {...register(name)}>
-        <option value="" disabled>
-          {placeholder}
-        </option>
+      <Select id={name} aria-invalid={!!error} className="mt-1.5 text-center" dir="ltr" {...register(name)}>
         {options.map((opt) => (
           <option key={opt} value={opt}>
             {opt} {unit || ''}
