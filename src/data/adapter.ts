@@ -21,7 +21,7 @@ export interface ClientRepository {
 
 /** Coach authentication. Implemented by both Firebase and mock adapters. */
 export interface AuthAdapter {
-  signIn(email: string, password: string): Promise<CoachUser>;
+  signIn(): Promise<CoachUser>;
   signOut(): Promise<void>;
   current(): CoachUser | null;
   /** Subscribe to auth changes; returns an unsubscribe function. */

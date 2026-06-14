@@ -20,8 +20,7 @@ export function useAuth() {
 
 export function useSignIn() {
   return useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      authAdapter.signIn(email, password),
+    mutationFn: () => authAdapter.signIn(),
   });
 }
 

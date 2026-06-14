@@ -15,8 +15,9 @@ import {
   uploadBytes,
 } from 'firebase/storage';
 import {
+  GoogleAuthProvider,
   onAuthStateChanged,
-  signInWithEmailAndPassword,
+  signInWithPopup,
   signOut as fbSignOut,
 } from 'firebase/auth';
 import type { Client, CoachUser } from '@/types';
@@ -88,8 +89,27 @@ export const firebaseClientRepository: ClientRepository = {
 };
 
 export const firebaseAuthAdapter: AuthAdapter = {
-  async signIn(email, password) {
-    const cred = await signInWithEmailAndPassword(firebaseAuth(), email.trim(), password);
+  async signIn() {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await signInWithPopup(firebaseAuth(), provider);
+    
+    const email = cred.user.email?.toLowerCase();
+    
+    if (!email) {
+      await fbSignOut(firebaseAuth());
+      throw new Error('Unauthorized');
+    }
+
+    // Check if the email exists in the admin_users collection
+    const adminDocRef = doc(firebaseDb(), 'admin_users', email);
+    const adminDocSnap = await getDoc(adminDocRef);
+
+    if (!adminDocSnap.exists()) {
+      await fbSignOut(firebaseAuth());
+      throw new Error('Unauthorized');
+    }
+    
     return { uid: cred.user.uid, email: cred.user.email };
   },
 

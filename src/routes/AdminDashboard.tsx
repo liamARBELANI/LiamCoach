@@ -53,9 +53,9 @@ function ClientCard({ client }: { client: Client }) {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate font-semibold">{client.intake.fullName}</p>
+          <p className="truncate font-semibold">{client.intake?.fullName ?? 'ללא שם'}</p>
           <p dir="ltr" className="text-start text-sm text-muted-foreground">
-            {formatILMobile(client.intake.phone)}
+            {client.intake?.phone ? formatILMobile(client.intake.phone) : 'ללא טלפון'}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
@@ -66,7 +66,7 @@ function ClientCard({ client }: { client: Client }) {
         </div>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
-        מטרה: {client.nutrition.primaryGoal}
+        מטרה: {client.nutrition?.primaryGoal ?? 'לא צוין'}
       </p>
     </Link>
   );
@@ -85,18 +85,22 @@ export default function AdminDashboard() {
     return clients
       .filter((c) => {
         if (q) {
-          const inName = c.intake.fullName.toLowerCase().includes(q);
-          const inPhone = c.intake.phone.includes(q.replace(/\D/g, ''));
+          const inName = c.intake?.fullName?.toLowerCase()?.includes(q) ?? false;
+          const inPhone = c.intake?.phone?.includes(q.replace(/\D/g, '')) ?? false;
           if (!inName && !inPhone) return false;
         }
         if (filterStatus && c.status !== filterStatus) return false;
-        if (filterGoal && c.nutrition.primaryGoal !== filterGoal) return false;
+        if (filterGoal && c.nutrition?.primaryGoal !== filterGoal) return false;
         return true;
       })
       .sort((a, b) => {
-        if (sort === 'date-asc') return a.createdAt - b.createdAt;
-        if (sort === 'name-asc') return a.intake.fullName.localeCompare(b.intake.fullName, 'he');
-        return b.createdAt - a.createdAt; // date-desc default
+        if (sort === 'date-asc') return (a.createdAt ?? 0) - (b.createdAt ?? 0);
+        if (sort === 'name-asc') {
+          const nameA = a.intake?.fullName ?? '';
+          const nameB = b.intake?.fullName ?? '';
+          return nameA.localeCompare(nameB, 'he');
+        }
+        return (b.createdAt ?? 0) - (a.createdAt ?? 0); // date-desc default
       });
   }, [clients, search, filterStatus, filterGoal, sort]);
 

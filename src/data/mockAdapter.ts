@@ -7,11 +7,7 @@ const CLIENTS_KEY = 'liamcoach:clients';
 const SEEDED_KEY = 'liamcoach:seeded';
 const AUTH_KEY = 'liamcoach:auth';
 
-/** Demo coach credentials for mock mode (shown on the login screen). */
-export const DEMO_COACH = {
-  email: 'liam@coach.app',
-  password: 'liamcoach',
-};
+/** Demo coach credentials for mock mode (removed since using SSO). */
 
 function readClients(): Client[] {
   if (!localStorage.getItem(SEEDED_KEY)) {
@@ -115,17 +111,12 @@ function emit(user: CoachUser | null) {
 }
 
 export const mockAuthAdapter: AuthAdapter = {
-  async signIn(email, password) {
-    const ok =
-      email.trim().toLowerCase() === DEMO_COACH.email && password === DEMO_COACH.password;
-    if (!ok) {
-      await delay(null, 350);
-      throw new Error('אימייל או סיסמה שגויים');
-    }
-    const user: CoachUser = { uid: 'demo-coach', email: DEMO_COACH.email };
+  async signIn() {
+    await delay(null, 350);
+    const user: CoachUser = { uid: 'demo-coach', email: 'liamgames35@gmail.com' };
     localStorage.setItem(AUTH_KEY, JSON.stringify(user));
     emit(user);
-    return delay(user, 350);
+    return user;
   },
 
   async signOut() {
