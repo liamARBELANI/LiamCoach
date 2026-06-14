@@ -1,4 +1,5 @@
 import { useFormContext, type FieldPath, type FieldValues } from 'react-hook-form';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,9 +10,14 @@ import { Label } from '@/components/ui/label';
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mt-1 text-xs text-destructive">
+    <motion.p
+      role="alert"
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mt-1 text-xs text-destructive"
+    >
       {message}
-    </p>
+    </motion.p>
   );
 }
 
@@ -51,7 +57,7 @@ export function TextField<T extends FieldValues>({
         id={name}
         placeholder={placeholder}
         aria-invalid={!!error}
-        className="mt-1"
+        className="mt-1.5"
         {...register(name)}
       />
       <FieldError message={error} />
@@ -89,7 +95,7 @@ export function TextareaField<T extends FieldValues>({
         placeholder={placeholder}
         rows={rows}
         aria-invalid={!!error}
-        className="mt-1"
+        className="mt-1.5"
         {...register(name)}
       />
       <FieldError message={error} />
@@ -97,7 +103,9 @@ export function TextareaField<T extends FieldValues>({
   );
 }
 
-// ── Number field (LTR input, right-aligned) ────────────────────────────────
+// ── Number field — LTR digits, unit badge on LEFT (start) in RTL layout ───
+// The input itself is dir=ltr so the number types naturally left-to-right.
+// In RTL, "end" (pe) is on the LEFT side of the element — the unit sits there.
 interface NumberFieldProps<T extends FieldValues> {
   name: FieldPath<T>;
   label: string;
@@ -122,7 +130,18 @@ export function NumberField<T extends FieldValues>({
       <Label htmlFor={name} required={required}>
         {label}
       </Label>
-      <div className="relative mt-1">
+      {/* Wrapper: RTL — so "start" = right, "end" = left */}
+      <div className="relative mt-1.5" dir="rtl">
+        {/* Unit badge sits on the LEFT (= logical end in RTL) */}
+        {unit && (
+          <span
+            className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm font-medium text-muted-foreground"
+            aria-hidden="true"
+          >
+            {unit}
+          </span>
+        )}
+        {/* Number input: LTR internally so digits go left→right, caret on right */}
         <Input
           id={name}
           type="number"
@@ -130,14 +149,13 @@ export function NumberField<T extends FieldValues>({
           inputMode="numeric"
           placeholder={placeholder}
           aria-invalid={!!error}
-          className={cn('text-start', unit && 'pe-12')}
+          className={cn(
+            'text-right', // digits right-aligned inside the LTR field looks natural in RTL
+            unit && 'ps-12', // push content away from the unit badge (start = right in RTL, but we flipped wrapper to RTL)
+          )}
+          style={{ textAlign: 'center' }}
           {...register(name)}
         />
-        {unit && (
-          <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-sm text-muted-foreground">
-            {unit}
-          </span>
-        )}
       </div>
       <FieldError message={error} />
     </div>
@@ -163,7 +181,7 @@ export function YesNoField<T extends FieldValues>({
   return (
     <div>
       <Label required={required}>{label}</Label>
-      <div className="mt-2 flex gap-6" role="radiogroup" aria-label={label}>
+      <div className="mt-2 flex justify-center gap-6" role="radiogroup" aria-label={label}>
         {(['כן', 'לא'] as const).map((val) => (
           <label key={val} className="flex cursor-pointer items-center gap-2">
             <input
@@ -207,7 +225,7 @@ export function RadioGroupField<T extends FieldValues>({
       <div
         role="radiogroup"
         aria-label={label}
-        className={cn('mt-2 gap-3', inline ? 'flex flex-wrap' : 'flex flex-col')}
+        className={cn('mt-2 gap-3', inline ? 'flex flex-wrap justify-center' : 'flex flex-col items-center')}
       >
         {options.map((opt) => (
           <label key={opt} className="flex cursor-pointer items-center gap-2">
@@ -226,7 +244,7 @@ export function RadioGroupField<T extends FieldValues>({
   );
 }
 
-// ── Pill radio group (card-style toggle buttons) ───────────────────────────
+// ── Pill radio group — spring pop on selection ─────────────────────────────
 export function PillRadioField<T extends FieldValues>({
   name,
   label,
@@ -243,21 +261,30 @@ export function PillRadioField<T extends FieldValues>({
   return (
     <div>
       <Label required={required}>{label}</Label>
-      <div className="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label={label}>
-        {options.map((opt) => (
-          <label
-            key={opt}
-            className={cn(
-              'flex cursor-pointer select-none items-center rounded-lg border px-4 py-2.5 text-sm transition-all duration-150',
-              currentValue === opt
-                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                : 'border-border bg-card text-foreground hover:border-primary/50',
-            )}
-          >
-            <input type="radio" value={opt} className="sr-only" {...register(name)} />
-            {opt}
-          </label>
-        ))}
+      <div className="mt-3 flex flex-wrap justify-center gap-2" role="radiogroup" aria-label={label}>
+        {options.map((opt) => {
+          const isActive = currentValue === opt;
+          return (
+            <motion.label
+              key={opt}
+              whileTap={{ scale: 0.93 }}
+              animate={
+                isActive
+                  ? { scale: 1.04, transition: { type: 'spring', stiffness: 500, damping: 20 } }
+                  : { scale: 1 }
+              }
+              className={cn(
+                'pill-option flex cursor-pointer select-none items-center rounded-xl border px-4 py-2.5 text-sm font-medium',
+                isActive
+                  ? 'pill-option-active border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5',
+              )}
+            >
+              <input type="radio" value={opt} className="sr-only" {...register(name)} />
+              {opt}
+            </motion.label>
+          );
+        })}
       </div>
       <FieldError message={error} />
     </div>
@@ -303,7 +330,7 @@ export function SelectField<T extends FieldValues>({
       <Label htmlFor={name} required={required}>
         {label}
       </Label>
-      <Select id={name} aria-invalid={!!error} className="mt-1" {...register(name)}>
+      <Select id={name} aria-invalid={!!error} className="mt-1.5" {...register(name)}>
         {placeholder && (
           <option value="" disabled>
             {placeholder}
@@ -312,6 +339,59 @@ export function SelectField<T extends FieldValues>({
         {options.map((opt) => (
           <option key={opt} value={opt}>
             {opt}
+          </option>
+        ))}
+      </Select>
+      <FieldError message={error} />
+    </div>
+  );
+}
+
+// ── Select Number field (Native Picker on iOS) ─────────────────────────────
+export interface SelectNumberFieldProps<T extends FieldValues> {
+  name: FieldPath<T>;
+  label: string;
+  min: number;
+  max: number;
+  step?: number;
+  required?: boolean;
+  unit?: string;
+  placeholder?: string;
+}
+
+export function SelectNumberField<T extends FieldValues>({
+  name,
+  label,
+  min,
+  max,
+  step = 1,
+  required,
+  unit,
+  placeholder = 'בחר...',
+}: SelectNumberFieldProps<T>) {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<T>();
+  const error = errors[name]?.message as string | undefined;
+
+  const options = [];
+  for (let i = min; i <= max; i += step) {
+    options.push(i);
+  }
+
+  return (
+    <div>
+      <Label htmlFor={name} required={required}>
+        {label}
+      </Label>
+      <Select id={name} aria-invalid={!!error} className="mt-1.5" dir="ltr" {...register(name)}>
+        <option value="" disabled>
+          {placeholder}
+        </option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt} {unit || ''}
           </option>
         ))}
       </Select>

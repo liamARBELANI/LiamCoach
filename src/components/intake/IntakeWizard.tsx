@@ -84,7 +84,7 @@ export function IntakeWizard() {
   const showBack = cardIdx > 0 || step === 2;
 
   return (
-    <div className="min-h-dvh">
+    <div className="intake-bg min-h-dvh">
       {/* Sticky progress nav */}
       <div className="sticky top-0 z-10">
         <ProgressDots

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
   User,
@@ -21,7 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   TextField,
   TextareaField,
-  NumberField,
+  SelectNumberField,
   PillRadioField,
   PillYesNoField,
 } from './fields';
@@ -42,16 +41,23 @@ export const STEP1_CARDS: CardMeta[] = [
   {
     id: 'intro',
     Icon: User,
-    headline: '!ברוכ/ה הבא/ה',
+    headline: 'ברוכ/ה הבא/ה!',
     subtitle: 'בוא נכיר אחד את השני — קצת פרטים בסיסיים כדי להתחיל',
     validationFields: ['fullName', 'phone'],
   },
   {
-    id: 'medical',
+    id: 'medical_1',
     Icon: Heart,
     headline: 'קודם — בריאות',
     subtitle: 'כמה שאלות בסיסיות כדי שהתוכנית תתאים לך בדיוק',
-    validationFields: ['medicallyFit', 'takesMedication', 'medicationDetails', 'injuriesLimitations'],
+    validationFields: ['medicallyFit', 'injuriesLimitations'],
+  },
+  {
+    id: 'medical_2',
+    Icon: Heart,
+    headline: 'עוד קצת על בריאות',
+    subtitle: 'האם יש תרופות קבועות שחשוב שאדע עליהן?',
+    validationFields: ['takesMedication', 'medicationDetails'],
   },
   {
     id: 'sports',
@@ -61,30 +67,44 @@ export const STEP1_CARDS: CardMeta[] = [
     validationFields: ['athleticBackground', 'sportLastYear'],
   },
   {
-    id: 'goals',
+    id: 'goals_1',
     Icon: Target,
-    headline: '?מה אתה שם לעצמך',
+    headline: 'מה המטרה שלך?',
     subtitle: 'כדי לעזור לך להגיע לשם — אני צריך להבין לאן אתה רוצה להגיע',
     validationFields: ['whyChangeNow', 'goal'],
   },
   {
-    id: 'training',
+    id: 'goals_2',
+    Icon: Target,
+    headline: 'תמונה שווה אלף מילים',
+    subtitle: 'יש לך תמונת מטרה? נשמח לראות לאן אנחנו מכוונים',
+    validationFields: ['goalImageUrl'],
+  },
+  {
+    id: 'training_1',
     Icon: Dumbbell,
-    headline: '!בוא נבנה לך תוכנית',
+    headline: 'בוא נבנה לך תוכנית!',
     subtitle: 'איך אתה מדמיין את עצמך מתאמן?',
     validationFields: ['daysPerWeek', 'trainingLocation', 'homeEquipmentDetails'],
   },
   {
+    id: 'training_2',
+    Icon: Dumbbell,
+    headline: 'העדפות אימון',
+    subtitle: 'דברים שחשוב לי לדעת כדי לבנות את האימון המושלם עבורך',
+    validationFields: ['cardioPreference', 'specialNotes'],
+  },
+  {
     id: 'referral',
     Icon: Star,
-    headline: '?איך הגעת אלי',
+    headline: 'איך הגעת אלי?',
     subtitle: 'סיפור ההכרות שלנו — חשוב לי לדעת',
     validationFields: ['referralSource', 'whyMe', 'followDuration'],
   },
   {
     id: 'terms',
     Icon: CheckCircle2,
-    headline: '!כמעט שם',
+    headline: 'כמעט סיימנו!',
     subtitle: 'אישור אחד קטן ואנחנו מתקדמים לשלב הבא',
     validationFields: ['termsAccepted'],
   },
@@ -136,8 +156,19 @@ export function Step1Intake({
   }
 
   async function handleContinue() {
-    const valid = await trigger(card.validationFields);
-    if (!valid) return;
+    const valid = isLastCard
+      ? await trigger()
+      : await trigger(card.validationFields);
+    
+    if (!valid) {
+      if (isLastCard) {
+        const errorKeys = Object.keys(methods.formState.errors)
+          .map(k => `[${k}]`)
+          .join(', ');
+        toast.error(`יש שדות חובה שלא מולאו ${errorKeys}. חזור ובדוק את כל השלבים.`);
+      }
+      return;
+    }
 
     if (!isLastCard) {
       onNextCard();
@@ -177,6 +208,17 @@ export function Step1Intake({
               label="האם אתה מאושר רפואית לפעילות גופנית?"
               required
             />
+            <TextareaField<FormState>
+              name="injuriesLimitations"
+              label="פציעות או מגבלות רפואיות"
+              placeholder="אם אין — השאר ריק"
+            />
+          </>
+        );
+
+      case 2:
+        return (
+          <>
             <PillYesNoField<FormState>
               name="takesMedication"
               label="האם אתה נוטל תרופות?"
@@ -190,15 +232,10 @@ export function Step1Intake({
                 required
               />
             )}
-            <TextareaField<FormState>
-              name="injuriesLimitations"
-              label="פציעות או מגבלות רפואיות"
-              placeholder="אם אין — השאר ריק"
-            />
           </>
         );
 
-      case 2:
+      case 3:
         return (
           <>
             <TextareaField<FormState>
@@ -214,7 +251,7 @@ export function Step1Intake({
           </>
         );
 
-      case 3:
+      case 4:
         return (
           <>
             <TextareaField<FormState>
@@ -227,19 +264,26 @@ export function Step1Intake({
               label="מה המטרה שלך?"
               placeholder="תאר את המטרה הפיזית / בריאותית שלך..."
             />
+          </>
+        );
+
+      case 5:
+        return (
+          <>
             <GoalImageUpload onChange={setGoalImageFile} />
           </>
         );
 
-      case 4:
+      case 6:
         return (
-          <>
-            <NumberField<FormState>
+          <div className="space-y-5">
+            <SelectNumberField<FormState>
               name="daysPerWeek"
-              label="כמה ימים בשבוע תרצה להתאמן?"
-              placeholder="3"
-              required
+              label="כמה ימים בשבוע נרצה להתאמן?"
+              min={1}
+              max={7}
               unit="ימים"
+              required
             />
             <PillRadioField<FormState>
               name="trainingLocation"
@@ -255,6 +299,12 @@ export function Step1Intake({
                 required
               />
             )}
+          </div>
+        );
+
+      case 7:
+        return (
+          <>
             <TextareaField<FormState>
               name="cardioPreference"
               label="העדפות קרדיו"
@@ -268,7 +318,7 @@ export function Step1Intake({
           </>
         );
 
-      case 5:
+      case 8:
         return (
           <>
             <TextField<FormState>
@@ -289,7 +339,7 @@ export function Step1Intake({
           </>
         );
 
-      case 6:
+      case 9:
         return (
           <div className="rounded-xl border border-border bg-muted/30 p-5">
             <label className="flex cursor-pointer items-start gap-3">
@@ -300,6 +350,7 @@ export function Step1Intake({
               <span className="text-sm leading-relaxed text-foreground">
                 אני מאשר/ת שהמידע שמסרתי מדויק ומלא. אני מבין/ה שהתכנית תיבנה על בסיס
                 פרטים אלה ואני מקבל/ת אחריות מלאה על עצמי.
+                <span className="text-destructive ms-1">*</span>
               </span>
             </label>
             {errors.termsAccepted && (
@@ -317,20 +368,20 @@ export function Step1Intake({
 
   return (
     <FormProvider {...methods}>
-      <form noValidate>
-        <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
-          {renderFields()}
-          <motion.div whileTap={{ scale: 0.97 }} className="pt-2">
-            <Button
-              type="button"
-              onClick={handleContinue}
-              className="w-full"
-              size="lg"
-            >
-              {isLastCard ? 'המשך לשלב 2' : 'המשך'}
-            </Button>
-          </motion.div>
-        </CardShell>
+      <form onSubmit={(e) => e.preventDefault()} className="flex min-h-[calc(100dvh-5rem)] flex-col">
+        <div className="flex-1">
+          <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
+            {renderFields()}
+          </CardShell>
+        </div>
+        <div className="mt-auto px-6 pb-8 pt-4">
+          <Button
+            onClick={handleContinue}
+            className="h-14 w-full rounded-2xl text-lg font-medium shadow-lg shadow-primary/25"
+          >
+            {isLastCard ? 'המשך לשלב 2' : 'המשך'}
+          </Button>
+        </div>
       </form>
     </FormProvider>
   );
