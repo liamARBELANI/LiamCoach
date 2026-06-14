@@ -41,3 +41,15 @@ export function zRequiredText(message: string, min = 1) {
 
 /** Optional free-text field that normalises missing/empty to `''`. */
 export const zOptionalText = z.string().trim().default('');
+
+/**
+ * Creates an optional enum schema that handles `null` values gracefully.
+ * React Hook Form passes `null` for unselected radio inputs, which causes
+ * standard `z.enum().optional()` to throw an invalid_type_error.
+ */
+export function zOptionalEnum<U extends string, T extends Readonly<[U, ...U[]]>>(values: T) {
+  return z.preprocess((val) => (val === null ? undefined : val), z.enum(values).optional());
+}
+
+/** Preconfigured optional Yes/No enum */
+export const optionalYesNo = zOptionalEnum(['כן', 'לא']);

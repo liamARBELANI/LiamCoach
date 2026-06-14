@@ -6,9 +6,7 @@ import {
   PRIMARY_GOALS,
   WORK_NATURES,
 } from '@/types';
-import { zNumber, zOptionalText } from './helpers';
-
-const optionalYesNo = z.enum(['כן', 'לא']).optional();
+import { zNumber, zOptionalText, optionalYesNo, zOptionalEnum } from './helpers';
 
 /** Conditional-visibility predicates shared with the wizard UI. */
 export const isStudying = (s: string | undefined) =>
@@ -49,8 +47,8 @@ export const nutritionSchema = z
 
     // עבודה (מותנה)
     workField: zOptionalText,
-    workNature: z.enum(WORK_NATURES).optional(),
-    eatingAtWork: z.enum(EATING_AT_WORK).optional(),
+    workNature: zOptionalEnum(WORK_NATURES),
+    eatingAtWork: zOptionalEnum(EATING_AT_WORK),
     microwaveAtWork: optionalYesNo,
     fridgeAtWork: optionalYesNo,
 
