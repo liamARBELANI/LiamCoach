@@ -27,8 +27,25 @@ function saveDraft(data: DraftData) {
 }
 
 export function useIntakeDraft() {
-  const getStep1 = useCallback((): Partial<IntakeValues> => loadDraft().step1 ?? {}, []);
-  const getStep2 = useCallback((): Partial<NutritionValues> => loadDraft().step2 ?? {}, []);
+  const getStep1 = useCallback((): Partial<IntakeValues> => {
+    const draft = loadDraft().step1 ?? {};
+    return {
+      daysPerWeek: 3,
+      ...draft,
+    };
+  }, []);
+
+  const getStep2 = useCallback((): Partial<NutritionValues> => {
+    const draft = loadDraft().step2 ?? {};
+    return {
+      age: 25,
+      weight: 70,
+      height: 170,
+      sleepHours: 7,
+      mealsPerDay: 3,
+      ...draft,
+    };
+  }, []);
 
   const saveStep1 = useCallback((values: Partial<IntakeValues>) => {
     saveDraft({ ...loadDraft(), step1: values });
