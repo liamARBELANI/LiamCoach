@@ -58,6 +58,9 @@ export const intakeSchema = z
     termsAccepted: z.boolean().refine((v) => v === true, {
       message: 'יש לאשר את התקנון כדי להמשיך',
     }),
+    nutritionDisclaimerAccepted: z.boolean().refine((v) => v === true, {
+      message: 'יש לאשר את ההצהרה כדי להמשיך',
+    }),
   })
   .superRefine((data, ctx) => {
     if (data.takesMedication === 'כן' && !data.medicationDetails?.trim()) {

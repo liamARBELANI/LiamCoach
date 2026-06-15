@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -25,7 +25,6 @@ import {
   WORK_NATURES,
   EATING_AT_WORK,
 } from '@/types';
-import { Button } from '@/components/ui/button';
 import {
   TextField,
   TextareaField,
@@ -34,6 +33,7 @@ import {
   PillYesNoField,
 } from './fields';
 import { CardShell } from './CardShell';
+import type { StepHandle } from './StickyActionBar';
 
 type FormState = Record<string, unknown>;
 
@@ -43,6 +43,12 @@ interface CardMeta {
   headline: string;
   subtitle: string;
   validationFields: string[];
+  /**
+   * Conditional-required checks that Zod's `.superRefine` can't enforce during a
+   * partial `trigger([...])`. Returns a map of field → error message for any that
+   * fail, or null when the card is valid. Keyed off form values, never card index.
+   */
+  validate?: (data: FormState) => Record<string, string> | null;
 }
 
 export const STEP2_CARDS: CardMeta[] = [
@@ -110,6 +116,10 @@ export const STEP2_CARDS: CardMeta[] = [
     headline: 'מה המטרה התזונתית שלך?',
     subtitle: 'ביחד נגיע לשם — פשוט תגיד לי לאן',
     validationFields: ['primaryGoal', 'primaryGoalOther'],
+    validate: (data) =>
+      data.primaryGoal === 'אחר' && !String(data.primaryGoalOther || '').trim()
+        ? { primaryGoalOther: 'יש לפרט את המטרה' }
+        : null,
   },
   {
     id: 'equipment',
@@ -147,17 +157,14 @@ interface Step2NutritionProps {
   cardIdx: number;
   onNextCard: () => void;
   onSubmit: (values: NutritionValues) => void;
-  isSubmitting: boolean;
+  /** Reports whether the current card's required fields are satisfied. */
+  onValidityChange?: (valid: boolean) => void;
 }
 
-export function Step2Nutrition({
-  defaultValues,
-  onChange,
-  cardIdx,
-  onNextCard,
-  onSubmit,
-  isSubmitting,
-}: Step2NutritionProps) {
+export const Step2Nutrition = forwardRef<StepHandle, Step2NutritionProps>(function Step2Nutrition(
+  { defaultValues, onChange, cardIdx, onNextCard, onSubmit, onValidityChange },
+  ref,
+) {
   const methods = useForm<FormState>({
     resolver: zodResolver(nutritionSchema),
     defaultValues: defaultValues as FormState,
@@ -178,6 +185,29 @@ export function Step2Nutrition({
   const card = STEP2_CARDS[cardIdx];
   const isLastCard = cardIdx === STEP2_CARDS.length - 1;
 
+  // Reactively gate the "Continue" button: it stays disabled until this card's
+  // required fields are satisfied, so a required field can never be skipped and
+  // surface only at final submit. Validity is derived from the Zod schema (the
+  // single source of truth) plus the card's conditional rule.
+  const isCardValid = useMemo(() => {
+    const result = nutritionSchema.safeParse(values);
+    let requiredOk: boolean;
+    if (result.success) {
+      requiredOk = true;
+    } else if (isLastCard) {
+      requiredOk = false;
+    } else {
+      const cardFields = new Set(card.validationFields);
+      requiredOk = !result.error.issues.some((issue) => cardFields.has(String(issue.path[0])));
+    }
+    const conditionalOk = !card.validate?.(values as FormState);
+    return requiredOk && conditionalOk;
+  }, [values, card, isLastCard]);
+
+  useEffect(() => {
+    onValidityChange?.(isCardValid);
+  }, [isCardValid, onValidityChange]);
+
   function onFormSubmit(data: FormState) {
     onSubmit(data as unknown as NutritionValues);
   }
@@ -189,21 +219,21 @@ export function Step2Nutrition({
       ? await trigger()
       : await trigger(card.validationFields);
 
-    const data = methods.getValues();
-    if (cardIdx === 7 && data.primaryGoal === 'אחר' && !String(data.primaryGoalOther || '').trim()) {
-      methods.setError('primaryGoalOther', { type: 'manual', message: 'יש לפרט את המטרה' });
+    // Card-scoped conditional rules (data-driven, never tied to card index).
+    const conditionalErrors = card.validate?.(methods.getValues());
+    if (conditionalErrors) {
+      for (const [field, message] of Object.entries(conditionalErrors)) {
+        methods.setError(field, { type: 'manual', message });
+      }
       valid = false;
     }
 
     if (!valid) {
-      if (isLastCard) {
-        const errorKeys = Object.keys(methods.formState.errors)
-          .map((k) => `[${k}]`)
-          .join(', ');
-        toast.error(`יש שדות חובה שלא מולאו ${errorKeys}. חזור ובדוק את כל השלבים.`);
-      } else {
-        toast.error('יש למלא את שדות החובה בכרטיס זה.');
-      }
+      toast.error(
+        isLastCard
+          ? 'יש שדות חובה שלא מולאו — חזרו ובדקו את השלבים.'
+          : 'יש למלא את שדות החובה בכרטיס זה.',
+      );
       return;
     }
 
@@ -216,6 +246,8 @@ export function Step2Nutrition({
       toast.error('יש שגיאות בטופס. אנא בדוק את כל השלבים.');
     })();
   }
+
+  useImperativeHandle(ref, () => ({ submit: handleContinue }));
 
   function renderFields() {
     switch (cardIdx) {
@@ -351,22 +383,11 @@ export function Step2Nutrition({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={(e) => e.preventDefault()} className="flex min-h-[calc(100dvh-5rem)] flex-col">
-        <div className="flex-1">
-          <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
-            {renderFields()}
-          </CardShell>
-        </div>
-        <div className="mt-auto px-6 pb-8 pt-4">
-          <Button
-            onClick={handleContinue}
-            className="h-14 w-full rounded-2xl text-lg font-medium shadow-lg shadow-primary/25"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'שולח...' : isLastCard ? 'סיום מתאמן חדש' : 'המשך'}
-          </Button>
-        </div>
+      <form onSubmit={(e) => e.preventDefault()}>
+        <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
+          {renderFields()}
+        </CardShell>
       </form>
     </FormProvider>
   );
-}
+});

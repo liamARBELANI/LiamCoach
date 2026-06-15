@@ -376,7 +376,10 @@ export function SelectNumberField<T extends FieldValues>({
       <Label htmlFor={name} required={required}>
         {label}
       </Label>
-      <Select id={name} aria-invalid={!!error} className="mt-1.5 text-center" dir="ltr" {...register(name)}>
+      <Select id={name} aria-invalid={!!error} className="mt-1.5 text-center" dir="ltr" defaultValue="" {...register(name)}>
+        <option value="" disabled>
+          בחר/י
+        </option>
         {options.map((opt) => (
           <option key={opt} value={opt}>
             {opt} {unit || ''}

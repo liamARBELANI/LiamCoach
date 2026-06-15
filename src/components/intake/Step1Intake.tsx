@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -15,7 +15,6 @@ import type { LucideIcon } from 'lucide-react';
 import { intakeSchema } from '@/schemas/intake';
 import type { IntakeValues } from '@/schemas/intake';
 import { TRAINING_LOCATIONS } from '@/types';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   TextField,
@@ -26,6 +25,7 @@ import {
 } from './fields';
 import { GoalImageUpload } from './GoalImageUpload';
 import { CardShell } from './CardShell';
+import type { StepHandle } from './StickyActionBar';
 
 type FormState = Record<string, unknown>;
 
@@ -35,6 +35,12 @@ interface CardMeta {
   headline: string;
   subtitle: string;
   validationFields: string[];
+  /**
+   * Conditional-required checks that Zod's `.superRefine` can't enforce during a
+   * partial `trigger([...])`. Returns a map of field → error message for any that
+   * fail, or null when the card is valid. Keyed off form values, never card index.
+   */
+  validate?: (data: FormState) => Record<string, string> | null;
 }
 
 export const STEP1_CARDS: CardMeta[] = [
@@ -58,6 +64,10 @@ export const STEP1_CARDS: CardMeta[] = [
     headline: 'עוד קצת על בריאות',
     subtitle: 'האם יש תרופות קבועות שחשוב שאדע עליהן?',
     validationFields: ['takesMedication', 'medicationDetails'],
+    validate: (data) =>
+      data.takesMedication === 'כן' && !String(data.medicationDetails || '').trim()
+        ? { medicationDetails: 'יש לפרט אילו תרופות' }
+        : null,
   },
   {
     id: 'sports',
@@ -86,6 +96,10 @@ export const STEP1_CARDS: CardMeta[] = [
     headline: 'בוא נבנה לך תוכנית!',
     subtitle: 'איך אתה מדמיין את עצמך מתאמן?',
     validationFields: ['daysPerWeek', 'trainingLocation', 'homeEquipmentDetails'],
+    validate: (data) =>
+      data.trainingLocation === 'בית' && !String(data.homeEquipmentDetails || '').trim()
+        ? { homeEquipmentDetails: 'יש לפרט את הציוד הקיים בבית' }
+        : null,
   },
   {
     id: 'training_2',
@@ -105,8 +119,8 @@ export const STEP1_CARDS: CardMeta[] = [
     id: 'terms',
     Icon: CheckCircle2,
     headline: 'כמעט סיימנו!',
-    subtitle: 'אישור אחד קטן ואנחנו מתקדמים לשלב הבא',
-    validationFields: ['termsAccepted'],
+    subtitle: 'שני אישורים קטנים ואנחנו מתקדמים לשלב הבא',
+    validationFields: ['termsAccepted', 'nutritionDisclaimerAccepted'],
   },
 ];
 
@@ -116,15 +130,14 @@ interface Step1IntakeProps {
   cardIdx: number;
   onNextCard: () => void;
   onFinish: (values: IntakeValues, goalImageFile: File | null) => void;
+  /** Reports whether the current card's required fields are satisfied. */
+  onValidityChange?: (valid: boolean) => void;
 }
 
-export function Step1Intake({
-  defaultValues,
-  onChange,
-  cardIdx,
-  onNextCard,
-  onFinish,
-}: Step1IntakeProps) {
+export const Step1Intake = forwardRef<StepHandle, Step1IntakeProps>(function Step1Intake(
+  { defaultValues, onChange, cardIdx, onNextCard, onFinish, onValidityChange },
+  ref,
+) {
   const [goalImageFile, setGoalImageFile] = useState<File | null>(null);
 
   const methods = useForm<FormState>({
@@ -132,6 +145,7 @@ export function Step1Intake({
     defaultValues: {
       ...defaultValues,
       termsAccepted: defaultValues.termsAccepted ?? false,
+      nutritionDisclaimerAccepted: defaultValues.nutritionDisclaimerAccepted ?? false,
     },
     mode: 'onBlur',
   });
@@ -151,6 +165,29 @@ export function Step1Intake({
   const card = STEP1_CARDS[cardIdx];
   const isLastCard = cardIdx === STEP1_CARDS.length - 1;
 
+  // Reactively gate the "Continue" button: it stays disabled until this card's
+  // required fields are satisfied, so a required field can never be skipped and
+  // surface only at final submit. Validity is derived from the Zod schema (the
+  // single source of truth) plus the card's conditional rule.
+  const isCardValid = useMemo(() => {
+    const result = intakeSchema.safeParse(values);
+    let requiredOk: boolean;
+    if (result.success) {
+      requiredOk = true;
+    } else if (isLastCard) {
+      requiredOk = false;
+    } else {
+      const cardFields = new Set(card.validationFields);
+      requiredOk = !result.error.issues.some((issue) => cardFields.has(String(issue.path[0])));
+    }
+    const conditionalOk = !card.validate?.(values as FormState);
+    return requiredOk && conditionalOk;
+  }, [values, card, isLastCard]);
+
+  useEffect(() => {
+    onValidityChange?.(isCardValid);
+  }, [isCardValid, onValidityChange]);
+
   function onFormSubmit(data: FormState) {
     onFinish(data as unknown as IntakeValues, goalImageFile);
   }
@@ -160,25 +197,21 @@ export function Step1Intake({
       ? await trigger()
       : await trigger(card.validationFields);
 
-    const data = methods.getValues();
-    if (cardIdx === 2 && data.takesMedication === 'כן' && !String(data.medicationDetails || '').trim()) {
-      methods.setError('medicationDetails', { type: 'manual', message: 'יש לפרט אילו תרופות' });
-      valid = false;
-    }
-    if (cardIdx === 6 && data.trainingLocation === 'בית' && !String(data.homeEquipmentDetails || '').trim()) {
-      methods.setError('homeEquipmentDetails', { type: 'manual', message: 'יש לפרט את הציוד הקיים בבית' });
+    // Card-scoped conditional rules (data-driven, never tied to card index).
+    const conditionalErrors = card.validate?.(methods.getValues());
+    if (conditionalErrors) {
+      for (const [field, message] of Object.entries(conditionalErrors)) {
+        methods.setError(field, { type: 'manual', message });
+      }
       valid = false;
     }
 
     if (!valid) {
-      if (isLastCard) {
-        const errorKeys = Object.keys(methods.formState.errors)
-          .map((k) => `[${k}]`)
-          .join(', ');
-        toast.error(`יש שדות חובה שלא מולאו ${errorKeys}. חזור ובדוק את כל השלבים.`);
-      } else {
-        toast.error('יש למלא את שדות החובה בכרטיס זה.');
-      }
+      toast.error(
+        isLastCard
+          ? 'יש שדות חובה שלא מולאו — חזרו ובדקו את השלבים.'
+          : 'יש למלא את שדות החובה בכרטיס זה.',
+      );
       return;
     }
 
@@ -191,6 +224,8 @@ export function Step1Intake({
       toast.error('יש שגיאות בטופס. אנא בדוק את כל השלבים.');
     })();
   }
+
+  useImperativeHandle(ref, () => ({ submit: handleContinue }));
 
   function renderFields() {
     switch (cardIdx) {
@@ -355,23 +390,44 @@ export function Step1Intake({
 
       case 9:
         return (
-          <div className="rounded-xl border border-border bg-muted/30 p-5">
-            <label className="flex cursor-pointer items-start gap-3">
-              <Checkbox
-                {...methods.register('termsAccepted')}
-                className="mt-0.5"
-              />
-              <span className="text-sm leading-relaxed text-foreground">
-                אני מאשר/ת שהמידע שמסרתי מדויק ומלא. אני מבין/ה שהתכנית תיבנה על בסיס
-                פרטים אלה ואני מקבל/ת אחריות מלאה על עצמי.
-                <span className="text-destructive ms-1">*</span>
-              </span>
-            </label>
-            {errors.termsAccepted && (
-              <p role="alert" className="mt-2 text-xs text-destructive">
-                {String(errors.termsAccepted.message)}
-              </p>
-            )}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border bg-muted/30 p-5">
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  {...methods.register('termsAccepted')}
+                  className="mt-0.5"
+                />
+                <span className="text-sm leading-relaxed text-foreground">
+                  אני מאשר/ת שהמידע שמסרתי מדויק ומלא. אני מבין/ה שהתכנית תיבנה על בסיס
+                  פרטים אלה ואני מקבל/ת אחריות מלאה על עצמי.
+                  <span className="text-destructive ms-1">*</span>
+                </span>
+              </label>
+              {errors.termsAccepted && (
+                <p role="alert" className="mt-2 text-xs text-destructive">
+                  {String(errors.termsAccepted.message)}
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-border bg-muted/30 p-5">
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  {...methods.register('nutritionDisclaimerAccepted')}
+                  className="mt-0.5"
+                />
+                <span className="text-sm leading-relaxed text-foreground">
+                  אני מאשר/ת שאני יודע/ת שתוכנית האימונים והתפריט הם המלצה בלבד, ושהמאמן
+                  אינו יועץ תזונה מוסמך.
+                  <span className="text-destructive ms-1">*</span>
+                </span>
+              </label>
+              {errors.nutritionDisclaimerAccepted && (
+                <p role="alert" className="mt-2 text-xs text-destructive">
+                  {String(errors.nutritionDisclaimerAccepted.message)}
+                </p>
+              )}
+            </div>
           </div>
         );
 
@@ -382,21 +438,11 @@ export function Step1Intake({
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={(e) => e.preventDefault()} className="flex min-h-[calc(100dvh-5rem)] flex-col">
-        <div className="flex-1">
-          <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
-            {renderFields()}
-          </CardShell>
-        </div>
-        <div className="mt-auto px-6 pb-8 pt-4">
-          <Button
-            onClick={handleContinue}
-            className="h-14 w-full rounded-2xl text-lg font-medium shadow-lg shadow-primary/25"
-          >
-            {isLastCard ? 'המשך לשלב 2' : 'המשך'}
-          </Button>
-        </div>
+      <form onSubmit={(e) => e.preventDefault()}>
+        <CardShell Icon={card.Icon} headline={card.headline} subtitle={card.subtitle}>
+          {renderFields()}
+        </CardShell>
       </form>
     </FormProvider>
   );
-}
+});
