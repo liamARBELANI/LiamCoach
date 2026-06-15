@@ -9,6 +9,7 @@ import { SignOutButton } from '@/components/admin/SignOutButton';
 import { useClients } from '@/hooks/clients';
 import { formatDate } from '@/lib/format';
 import { formatILMobile } from '@/lib/phone';
+import { statusLabel } from '@/lib/clientStatus';
 import type { Client, PrimaryGoal } from '@/types';
 import { PRIMARY_GOALS } from '@/types';
 import { computeInsights } from '@/lib/insights';
@@ -17,10 +18,6 @@ import { FlagChip, BmiChip } from '@/components/admin/FlagChip';
 import { ClientTable } from '@/components/admin/ClientTable';
 
 type SortKey = 'date-desc' | 'date-asc' | 'name-asc' | 'bmi-desc' | 'bmi-asc';
-
-function statusLabel(s: Client['status']) {
-  return s === 'completed' ? 'הושלם' : 'ממתין';
-}
 
 // ── Stats strip ───────────────────────────────────────────────────────────
 function StatsCards({ clients, attention }: { clients: Client[]; attention: number }) {

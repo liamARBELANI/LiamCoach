@@ -2,13 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 import { formatILMobile } from '@/lib/phone';
+import { statusLabel } from '@/lib/clientStatus';
 import { FlagChip, BmiChip } from '@/components/admin/FlagChip';
 import type { Client } from '@/types';
 import type { ComputedInsights } from '@/lib/insights';
-
-function statusLabel(s: Client['status']) {
-  return s === 'completed' ? 'הושלם' : 'ממתין';
-}
 
 export function ClientTable({
   clients,
