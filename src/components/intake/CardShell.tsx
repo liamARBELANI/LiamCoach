@@ -26,14 +26,14 @@ const itemVariants = {
 
 export function CardShell({ Icon, headline, subtitle, children }: CardShellProps) {
   return (
-    <div className="flex flex-col items-center px-4 pb-8 pt-10">
+    <div className="flex flex-col items-center px-4 pb-8 pt-6">
       {/* Icon with glow ring */}
       <motion.div
         style={{ animation: 'float-bob 3s ease-in-out infinite' }}
-        className="mb-8"
+        className="mb-4"
       >
-        <div className="icon-glow flex h-20 w-20 items-center justify-center rounded-2xl">
-          <Icon className="h-10 w-10 text-primary" strokeWidth={1.5} />
+        <div className="icon-glow flex h-14 w-14 items-center justify-center rounded-2xl">
+          <Icon className="h-7 w-7 text-primary" strokeWidth={1.5} />
         </div>
       </motion.div>
 
@@ -42,7 +42,7 @@ export function CardShell({ Icon, headline, subtitle, children }: CardShellProps
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-2 text-center text-2xl font-bold leading-tight text-foreground"
+        className="mb-1.5 text-center text-2xl font-bold leading-tight text-foreground"
       >
         {headline}
       </motion.h1>
@@ -50,14 +50,14 @@ export function CardShell({ Icon, headline, subtitle, children }: CardShellProps
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-8 max-w-xs text-center text-sm leading-relaxed text-muted-foreground"
+        className="mb-6 max-w-xs text-center text-sm leading-relaxed text-muted-foreground"
       >
         {subtitle}
       </motion.p>
 
       {/* Form fields + button — staggered */}
       <motion.div
-        className="w-full max-w-md space-y-8"
+        className="w-full max-w-md space-y-5"
         variants={containerVariants}
         initial="hidden"
         animate="visible"

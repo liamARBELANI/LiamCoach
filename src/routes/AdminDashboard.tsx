@@ -73,7 +73,7 @@ function ClientCard({ client }: { client: Client }) {
 }
 
 export default function AdminDashboard() {
-  const { data: clients = [], isLoading, isError } = useClients();
+  const { data: clients = [], isLoading, isError, error } = useClients();
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'completed' | 'pending'>('');
@@ -122,6 +122,14 @@ export default function AdminDashboard() {
           <Card>
             <CardContent className="py-10 text-center text-destructive">
               אירעה שגיאה בטעינת הנתונים. נסה לרענן את הדף.
+              {import.meta.env.DEV && error instanceof Error && (
+                <pre
+                  dir="ltr"
+                  className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 text-start text-xs"
+                >
+                  {error.message}
+                </pre>
+              )}
             </CardContent>
           </Card>
         ) : (

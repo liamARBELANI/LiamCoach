@@ -22,6 +22,7 @@ export default function LoginPage() {
       await signIn.mutateAsync();
       navigate('/admin', { replace: true });
     } catch (error: any) {
+      console.error('[LoginPage] sign-in failed:', error);
       if (error?.message === 'Unauthorized') {
         setErrorMsg('אין לך הרשאות גישה למערכת זו. אנא התחבר עם חשבון מורשה.');
       } else {

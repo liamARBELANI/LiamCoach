@@ -47,6 +47,7 @@ export interface IntakeForm {
   whyMe: string;
   followDuration: string;
   termsAccepted: boolean; // must be true to submit
+  nutritionDisclaimerAccepted: boolean; // must be true: program/menu are a recommendation only
 }
 
 /** Questionnaire 2 — תזונה */

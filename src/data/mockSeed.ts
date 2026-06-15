@@ -30,6 +30,7 @@ export function buildSeed(): Client[] {
         whyMe: 'אהבתי את הגישה המקצועית והרגועה.',
         followDuration: 'כחצי שנה',
         termsAccepted: true,
+        nutritionDisclaimerAccepted: true,
       },
       nutrition: {
         age: 29,
@@ -89,6 +90,7 @@ export function buildSeed(): Client[] {
         whyMe: 'שמעתי המלצות מעולות.',
         followDuration: 'שנה בערך',
         termsAccepted: true,
+        nutritionDisclaimerAccepted: true,
       },
       nutrition: {
         age: 34,
