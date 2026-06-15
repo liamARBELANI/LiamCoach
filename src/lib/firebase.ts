@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, type Analytics } from 'firebase/analytics';
 
@@ -30,10 +30,20 @@ let analyticsInstance: Analytics | null = null;
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig);
   authInstance = getAuth(app);
-  dbInstance = getFirestore(app);
+  // `ignoreUndefinedProperties` lets us write form objects that contain optional
+  // fields left as `undefined` (e.g. untouched yes/no & enum selects). Without it,
+  // Firestore throws "Unsupported field value: undefined" on save — which surfaced
+  // to trainees as a generic "form submit failed" error at the very end.
+  dbInstance = initializeFirestore(app, { ignoreUndefinedProperties: true });
   storageInstance = getStorage(app);
   if (typeof window !== 'undefined') {
-    analyticsInstance = getAnalytics(app);
+    // Analytics is non-essential and can throw in blocked/unsupported environments.
+    // Never let it crash app boot — that would white-screen everything.
+    try {
+      analyticsInstance = getAnalytics(app);
+    } catch (err) {
+      console.warn('[firebase] analytics unavailable:', err);
+    }
   }
 }
 

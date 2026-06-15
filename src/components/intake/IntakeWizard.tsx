@@ -89,7 +89,8 @@ export function IntakeWizard() {
       });
       clearDraft();
       navigate('/intake/success');
-    } catch {
+    } catch (err) {
+      console.error('[intake] submit failed:', err);
       toast.error('אירעה שגיאה בשליחת הטופס. נסה שוב.');
     }
   }
