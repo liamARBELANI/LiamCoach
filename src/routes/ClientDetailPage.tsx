@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Header } from '@/components/common/Header';
@@ -73,11 +73,13 @@ function nutritionRows(c: Client): Row[] {
 export default function ClientDetailPage() {
   const { id } = useParams();
   const { data: client, isLoading, isError } = useClient(id);
-  const updateClient = useUpdateClient();
+  const updateNotes = useUpdateClient();
+  const updateStatus = useUpdateClient();
 
   const [notes, setNotes] = useState('');
+  const notesDirty = useRef(false);
   useEffect(() => {
-    if (client) setNotes(client.coachNotes ?? '');
+    if (client && !notesDirty.current) setNotes(client.coachNotes ?? '');
   }, [client]);
 
   if (isLoading) {
@@ -110,16 +112,16 @@ export default function ClientDetailPage() {
 
   function saveNotes() {
     if (!client) return;
-    updateClient.mutate(
+    updateNotes.mutate(
       { id: client.id, patch: { coachNotes: notes } },
-      { onSuccess: () => toast.success('ההערות נשמרו'), onError: () => toast.error('שמירת ההערות נכשלה') },
+      { onSuccess: () => { notesDirty.current = false; toast.success('ההערות נשמרו'); }, onError: () => toast.error('שמירת ההערות נכשלה') },
     );
   }
 
   function toggleStatus() {
     if (!client) return;
     const next = client.status === 'completed' ? 'pending' : 'completed';
-    updateClient.mutate(
+    updateStatus.mutate(
       { id: client.id, patch: { status: next } },
       { onError: () => toast.error('עדכון הסטטוס נכשל') },
     );
@@ -131,7 +133,7 @@ export default function ClientDetailPage() {
       <main className="container space-y-4 py-8">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <Link to="/admin" className="text-sm text-primary">→ חזרה לרשימה</Link>
+            <Link to="/admin" className="text-sm text-primary">← חזרה לרשימה</Link>
             <h1 className="mt-1 text-2xl font-bold">{client.intake.fullName}</h1>
             <p dir="ltr" className="text-start text-sm text-muted-foreground">
               {formatILMobile(client.intake.phone)} · {formatDate(client.createdAt)}
@@ -168,10 +170,10 @@ export default function ClientDetailPage() {
         <Card>
           <CardContent className="py-5">
             <h2 className="mb-3 text-base font-semibold">הערות מאמן</h2>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={5} />
+            <Textarea value={notes} onChange={(e) => { notesDirty.current = true; setNotes(e.target.value); }} rows={5} />
             <div className="mt-3 flex justify-end">
-              <Button onClick={saveNotes} disabled={updateClient.isPending}>
-                {updateClient.isPending ? 'שומר…' : 'שמירת הערות'}
+              <Button onClick={saveNotes} disabled={updateNotes.isPending}>
+                {updateNotes.isPending ? 'שומר…' : 'שמירת הערות'}
               </Button>
             </div>
           </CardContent>
