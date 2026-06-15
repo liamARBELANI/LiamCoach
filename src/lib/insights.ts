@@ -59,3 +59,59 @@ export function computeBmi(weight: number, height: number): Bmi | null {
   const value = Math.round((weight / (m * m)) * 10) / 10;
   return { value, category: bmiCategory(value) };
 }
+
+// ── Energy ─────────────────────────────────────────────────────────────────
+const ACTIVITY_MULTIPLIER: Record<ActivityLevel, number> = {
+  'ישיבה רוב היום': 1.2,
+  'קל': 1.375,
+  'בינוני': 1.55,
+  'גבוה': 1.725,
+  'אתלטי': 1.9,
+};
+
+const GOAL_ADJUSTMENT: Record<PrimaryGoal, number> = {
+  'ירידה במשקל': -0.15,
+  'חיטוב': -0.1,
+  'מסה': 0.15,
+  'עלייה במשקל': 0.15,
+  'כוח': 0.05,
+  'אחר': 0,
+};
+
+const PROTEIN_G_PER_KG = 2.0;
+const FAT_CALORIE_SHARE = 0.25;
+
+interface EnergyInput {
+  age: number;
+  height: number;
+  weight: number;
+  sex: Sex | undefined;
+  activityLevel: ActivityLevel | undefined;
+  primaryGoal: PrimaryGoal;
+}
+
+/** Mifflin-St Jeor BMR → TDEE → goal-adjusted target + macro split.
+ *  Returns null when sex/activityLevel/weight are missing (can't compute). */
+export function computeEnergy(input: EnergyInput): Energy | null {
+  const { age, height, weight, sex, activityLevel, primaryGoal } = input;
+  if (!sex || !activityLevel || !weight || !height || !age) return null;
+
+  const bmrRaw =
+    10 * weight + 6.25 * height - 5 * age + (sex === 'זכר' ? 5 : -161);
+  const tdeeRaw = bmrRaw * ACTIVITY_MULTIPLIER[activityLevel];
+  const targetRaw = tdeeRaw * (1 + GOAL_ADJUSTMENT[primaryGoal]);
+
+  const proteinG = Math.round(PROTEIN_G_PER_KG * weight);
+  const fatG = Math.round((targetRaw * FAT_CALORIE_SHARE) / 9);
+  // Carbs fill the remainder, derived from raw (unrounded) values.
+  const carbG = Math.round(
+    (targetRaw - proteinG * 4 - targetRaw * FAT_CALORIE_SHARE) / 4,
+  );
+
+  return {
+    bmr: Math.round(bmrRaw),
+    tdee: Math.round(tdeeRaw),
+    targetCalories: Math.round(targetRaw),
+    macros: { proteinG, carbG, fatG },
+  };
+}
