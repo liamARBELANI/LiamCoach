@@ -32,3 +32,6 @@ pnpm-debug.log*
 # firebase
 .firebase
 firebase-debug.log
+
+# brainstorming visual companion
+.superpowers/
