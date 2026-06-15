@@ -11,15 +11,18 @@ import { formatDate } from '@/lib/format';
 import { formatILMobile } from '@/lib/phone';
 import type { Client, PrimaryGoal } from '@/types';
 import { PRIMARY_GOALS } from '@/types';
+import { computeInsights } from '@/lib/insights';
+import type { ComputedInsights } from '@/lib/insights';
+import { FlagChip, BmiChip } from '@/components/admin/FlagChip';
 
-type SortKey = 'date-desc' | 'date-asc' | 'name-asc';
+type SortKey = 'date-desc' | 'date-asc' | 'name-asc' | 'bmi-desc' | 'bmi-asc';
 
 function statusLabel(s: Client['status']) {
   return s === 'completed' ? 'הושלם' : 'ממתין';
 }
 
 // ── Stats strip ───────────────────────────────────────────────────────────
-function StatsCards({ clients }: { clients: Client[] }) {
+function StatsCards({ clients, attention }: { clients: Client[]; attention: number }) {
   const total = clients.length;
   const completed = clients.filter((c) => c.status === 'completed').length;
   const pending = clients.filter((c) => c.status === 'pending').length;
@@ -28,10 +31,11 @@ function StatsCards({ clients }: { clients: Client[] }) {
     { label: 'סה"כ מתאמנים', value: total },
     { label: 'הושלמו', value: completed },
     { label: 'ממתינים', value: pending },
+    { label: 'דורשים תשומת לב', value: attention },
   ];
 
   return (
-    <div className="mb-6 grid grid-cols-3 gap-3">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
       {stats.map(({ label, value }) => (
         <Card key={label}>
           <CardContent className="py-4 text-center">
@@ -45,7 +49,7 @@ function StatsCards({ clients }: { clients: Client[] }) {
 }
 
 // ── Client card (shared between mobile + desktop) ─────────────────────────
-function ClientCard({ client }: { client: Client }) {
+function ClientCard({ client, insights }: { client: Client; insights?: ComputedInsights }) {
   return (
     <Link
       to={`/admin/clients/${client.id}`}
@@ -65,9 +69,16 @@ function ClientCard({ client }: { client: Client }) {
           <span className="text-xs text-muted-foreground">{formatDate(client.createdAt)}</span>
         </div>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">
-        מטרה: {client.nutrition?.primaryGoal ?? 'לא צוין'}
-      </p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+          {client.nutrition?.primaryGoal ?? 'ללא מטרה'}
+        </span>
+        <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+          {client.intake?.daysPerWeek ?? '?'} ימים
+        </span>
+        {insights?.bmi && <BmiChip value={insights.bmi.value} category={insights.bmi.category} />}
+        {insights?.flags.map((f) => <FlagChip key={f.id} flag={f} />)}
+      </div>
     </Link>
   );
 }
@@ -75,9 +86,16 @@ function ClientCard({ client }: { client: Client }) {
 export default function AdminDashboard() {
   const { data: clients = [], isLoading, isError, error } = useClients();
 
+  const insightsById = useMemo(() => {
+    const map = new Map<string, ComputedInsights>();
+    for (const c of clients) map.set(c.id, computeInsights(c));
+    return map;
+  }, [clients]);
+
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'completed' | 'pending'>('');
   const [filterGoal, setFilterGoal] = useState<'' | PrimaryGoal>('');
+  const [filterFlagged, setFilterFlagged] = useState(false);
   const [sort, setSort] = useState<SortKey>('date-desc');
 
   const filtered = useMemo(() => {
@@ -93,6 +111,7 @@ export default function AdminDashboard() {
         }
         if (filterStatus && c.status !== filterStatus) return false;
         if (filterGoal && c.nutrition?.primaryGoal !== filterGoal) return false;
+        if (filterFlagged && !insightsById.get(c.id)?.needsAttention) return false;
         return true;
       })
       .sort((a, b) => {
@@ -102,9 +121,14 @@ export default function AdminDashboard() {
           const nameB = b.intake?.fullName ?? '';
           return nameA.localeCompare(nameB, 'he');
         }
+        if (sort === 'bmi-desc' || sort === 'bmi-asc') {
+          const bmiA = insightsById.get(a.id)?.bmi?.value ?? -1;
+          const bmiB = insightsById.get(b.id)?.bmi?.value ?? -1;
+          return sort === 'bmi-asc' ? bmiA - bmiB : bmiB - bmiA;
+        }
         return (b.createdAt ?? 0) - (a.createdAt ?? 0); // date-desc default
       });
-  }, [clients, search, filterStatus, filterGoal, sort]);
+  }, [clients, search, filterStatus, filterGoal, filterFlagged, sort, insightsById]);
 
   return (
     <div className="min-h-dvh">
@@ -134,7 +158,12 @@ export default function AdminDashboard() {
           </Card>
         ) : (
           <>
-            {clients.length > 0 && <StatsCards clients={clients} />}
+            {clients.length > 0 && (
+              <StatsCards
+                clients={clients}
+                attention={clients.filter((c) => insightsById.get(c.id)?.needsAttention).length}
+              />
+            )}
 
             {/* Filters */}
             <div className="mb-4 flex flex-wrap gap-3">
@@ -175,7 +204,22 @@ export default function AdminDashboard() {
                 <option value="date-desc">תאריך — חדש לישן</option>
                 <option value="date-asc">תאריך — ישן לחדש</option>
                 <option value="name-asc">שם — א׳ ל׳ת</option>
+                <option value="bmi-desc">BMI — גבוה לנמוך</option>
+                <option value="bmi-asc">BMI — נמוך לגבוה</option>
               </Select>
+              <button
+                type="button"
+                onClick={() => setFilterFlagged((v) => !v)}
+                className={
+                  'rounded-md border px-3 py-2 text-sm transition-colors ' +
+                  (filterFlagged
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/40')
+                }
+                aria-pressed={filterFlagged}
+              >
+                דורשים תשומת לב
+              </button>
             </div>
 
             {/* List */}
@@ -189,7 +233,7 @@ export default function AdminDashboard() {
               <ul className="space-y-3">
                 {filtered.map((c) => (
                   <li key={c.id}>
-                    <ClientCard client={c} />
+                    <ClientCard client={c} insights={insightsById.get(c.id)} />
                   </li>
                 ))}
               </ul>
