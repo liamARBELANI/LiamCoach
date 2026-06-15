@@ -181,4 +181,21 @@ describe('computeInsights', () => {
     const ins = computeInsights(makeClient({ intake: { takesMedication: 'כן', medicationDetails: 'x' } as never }));
     expect(ins.needsAttention).toBe(true);
   });
+
+  it('does not throw on a partial client missing intake/nutrition', () => {
+    const partial = { id: 'p1', status: 'pending', createdAt: 0, updatedAt: 0, coachNotes: '' } as unknown as Client;
+    const ins = computeInsights(partial);
+    expect(ins.bmi).toBeNull();
+    expect(ins.energy).toBeNull();
+    expect(ins.flags).toEqual([]);
+    expect(ins.needsAttention).toBe(false);
+    expect(ins.missing).toEqual(['sex', 'activityLevel']);
+  });
+});
+
+describe('computeFlags', () => {
+  it('returns [] for a partial client missing intake/nutrition', () => {
+    const partial = { id: 'p1', status: 'pending', createdAt: 0, updatedAt: 0, coachNotes: '' } as unknown as Client;
+    expect(computeFlags(partial)).toEqual([]);
+  });
 });

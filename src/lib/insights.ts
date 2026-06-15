@@ -1,4 +1,4 @@
-import type { Client, Sex, ActivityLevel, PrimaryGoal } from '@/types';
+import type { Client, IntakeForm, NutritionForm, Sex, ActivityLevel, PrimaryGoal } from '@/types';
 
 // ── Public result types ──────────────────────────────────────────────────
 export type BmiCategory = 'תת-משקל' | 'תקין' | 'עודף' | 'השמנה';
@@ -119,44 +119,52 @@ export function computeEnergy(input: EnergyInput): Energy | null {
 // ── Flags ───────────────────────────────────────────────────────────────────
 const SEVERITY_RANK: Record<FlagSeverity, number> = { high: 0, medium: 1, info: 2 };
 
-/** Alert flags from the questionnaire, sorted high → medium → info. */
+/** Alert flags from the questionnaire, sorted high → medium → info.
+ *  Defensive against partial/pending records where intake or nutrition is absent. */
 export function computeFlags(client: Client): Flag[] {
-  const { intake, nutrition } = client;
+  const intake = client.intake as IntakeForm | undefined;
+  const nutrition = client.nutrition as NutritionForm | undefined;
   const flags: Flag[] = [];
 
-  if (intake.medicallyFit === 'לא') {
+  if (intake?.medicallyFit === 'לא') {
     flags.push({ id: 'not-medically-fit', severity: 'high', label: 'לא מאושר רפואית' });
   }
-  if (isMeaningfulText(intake.injuriesLimitations)) {
-    flags.push({ id: 'injuries', severity: 'medium', label: 'פציעות / מגבלות', detail: intake.injuriesLimitations.trim() });
+  if (isMeaningfulText(intake?.injuriesLimitations)) {
+    flags.push({ id: 'injuries', severity: 'medium', label: 'פציעות / מגבלות', detail: intake?.injuriesLimitations?.trim() });
   }
-  if (isMeaningfulText(nutrition.allergies)) {
-    flags.push({ id: 'allergies', severity: 'medium', label: 'אלרגיות', detail: nutrition.allergies.trim() });
+  if (isMeaningfulText(nutrition?.allergies)) {
+    flags.push({ id: 'allergies', severity: 'medium', label: 'אלרגיות', detail: nutrition?.allergies?.trim() });
   }
-  if (intake.takesMedication === 'כן') {
-    flags.push({ id: 'medication', severity: 'info', label: 'נוטל תרופות', detail: intake.medicationDetails?.trim() || undefined });
+  if (intake?.takesMedication === 'כן') {
+    flags.push({ id: 'medication', severity: 'info', label: 'נוטל תרופות', detail: intake?.medicationDetails?.trim() || undefined });
   }
 
   return flags.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
 }
 
-/** Full deterministic insight bundle for one client. */
+/** Full deterministic insight bundle for one client.
+ *  Defensive against partial/pending records where intake or nutrition is absent. */
 export function computeInsights(client: Client): ComputedInsights {
-  const { intake, nutrition } = client;
-  const bmi = computeBmi(nutrition.weight, nutrition.height);
-  const energy = computeEnergy({
-    age: nutrition.age,
-    height: nutrition.height,
-    weight: nutrition.weight,
-    sex: intake.sex,
-    activityLevel: nutrition.activityLevel,
-    primaryGoal: nutrition.primaryGoal,
-  });
+  const intake = client.intake as IntakeForm | undefined;
+  const nutrition = client.nutrition as NutritionForm | undefined;
+
+  const bmi = nutrition ? computeBmi(nutrition.weight, nutrition.height) : null;
+  const energy =
+    intake && nutrition
+      ? computeEnergy({
+          age: nutrition.age,
+          height: nutrition.height,
+          weight: nutrition.weight,
+          sex: intake.sex,
+          activityLevel: nutrition.activityLevel,
+          primaryGoal: nutrition.primaryGoal,
+        })
+      : null;
   const flags = computeFlags(client);
 
   const missing: string[] = [];
-  if (!intake.sex) missing.push('sex');
-  if (!nutrition.activityLevel) missing.push('activityLevel');
+  if (!intake?.sex) missing.push('sex');
+  if (!nutrition?.activityLevel) missing.push('activityLevel');
 
   return { bmi, energy, flags, needsAttention: flags.length > 0, missing };
 }

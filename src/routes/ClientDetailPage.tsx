@@ -38,6 +38,7 @@ function DataSection({ title, rows }: { title: string; rows: Row[] }) {
 
 function intakeRows(c: Client): Row[] {
   const i = c.intake;
+  if (!i) return [];
   return [
     ['מין', i.sex], ['מאושר רפואית', i.medicallyFit],
     ['נוטל תרופות', i.takesMedication], ['פירוט תרופות', i.medicationDetails],
@@ -52,6 +53,7 @@ function intakeRows(c: Client): Row[] {
 
 function nutritionRows(c: Client): Row[] {
   const n = c.nutrition;
+  if (!n) return [];
   return [
     ['גיל', n.age], ['גובה (ס״מ)', n.height], ['משקל (ק״ג)', n.weight],
     ['רמת פעילות', n.activityLevel], ['תחביבים', n.hobbies],
@@ -134,9 +136,9 @@ export default function ClientDetailPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <Link to="/admin" className="text-sm text-primary">← חזרה לרשימה</Link>
-            <h1 className="mt-1 text-2xl font-bold">{client.intake.fullName}</h1>
+            <h1 className="mt-1 text-2xl font-bold">{client.intake?.fullName ?? 'ללא שם'}</h1>
             <p dir="ltr" className="text-start text-sm text-muted-foreground">
-              {formatILMobile(client.intake.phone)} · {formatDate(client.createdAt)}
+              {client.intake?.phone ? formatILMobile(client.intake.phone) : 'ללא טלפון'} · {formatDate(client.createdAt)}
             </p>
           </div>
           <button type="button" onClick={toggleStatus} aria-label="החלף סטטוס">
