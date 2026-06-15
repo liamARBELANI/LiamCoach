@@ -2,6 +2,7 @@ import { useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Ruler,
   Sun,
@@ -13,6 +14,8 @@ import {
   Home,
   Clock,
   Sparkles,
+  Briefcase,
+  GraduationCap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { nutritionSchema } from '@/schemas/nutrition';
@@ -36,6 +39,49 @@ import { CardShell } from './CardShell';
 import type { StepHandle } from './StickyActionBar';
 
 type FormState = Record<string, unknown>;
+
+/**
+ * A conditional sub-form that smoothly expands into view. Used when an answer
+ * (e.g. "I work") unlocks follow-up questions — it slides + fades open instead
+ * of snapping in, and carries a soft branded frame so it reads as "extra,
+ * related" rather than a wall of cramped inputs.
+ */
+function RevealPanel({
+  show,
+  panelKey,
+  Icon,
+  title,
+  children,
+}: {
+  show: boolean;
+  panelKey: string;
+  Icon: LucideIcon;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      {show && (
+        <motion.div
+          key={panelKey}
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="overflow-hidden"
+        >
+          <div className="space-y-5 rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.06] to-transparent p-5 shadow-[0_1px_0_0_hsl(var(--primary)/0.08)_inset]">
+            <div className="flex items-center justify-center gap-2 text-primary">
+              <Icon className="h-4 w-4" strokeWidth={2} />
+              <span className="text-sm font-semibold tracking-wide">{title}</span>
+            </div>
+            {children}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 interface CardMeta {
   id: string;
@@ -262,33 +308,37 @@ export const Step2Nutrition = forwardRef<StepHandle, Step2NutritionProps>(functi
 
       case 1:
         return (
-          <>
+          <div className="space-y-6">
             <PillRadioField<FormState>
               name="occupationStatus"
               label="סטטוס תעסוקתי"
               options={OCCUPATION_STATUSES}
               required
             />
-            {isStudying(occupationStatus) && (
-              <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">לימודים</p>
-                <TextField<FormState> name="studyField" label="תחום לימודים" />
-                <TextField<FormState> name="studyYear" label="שנת לימודים" />
+            <RevealPanel
+              show={isStudying(occupationStatus)}
+              panelKey="study"
+              Icon={GraduationCap}
+              title="קצת על הלימודים"
+            >
+              <TextField<FormState> name="studyField" label="תחום לימודים" />
+              <TextField<FormState> name="studyYear" label="שנת לימודים" />
+            </RevealPanel>
+            <RevealPanel
+              show={isWorking(occupationStatus)}
+              panelKey="work"
+              Icon={Briefcase}
+              title="קצת על העבודה"
+            >
+              <TextField<FormState> name="workField" label="תחום עבודה" />
+              <PillRadioField<FormState> name="workNature" label="אופי העבודה" options={WORK_NATURES} />
+              <PillRadioField<FormState> name="eatingAtWork" label="איפה אתה אוכל בעבודה?" options={EATING_AT_WORK} />
+              <div className="grid grid-cols-2 gap-4">
+                <PillYesNoField<FormState> name="microwaveAtWork" label="מיקרוגל בעבודה?" />
+                <PillYesNoField<FormState> name="fridgeAtWork" label="מקרר בעבודה?" />
               </div>
-            )}
-            {isWorking(occupationStatus) && (
-              <div className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">עבודה</p>
-                <TextField<FormState> name="workField" label="תחום עבודה" />
-                <PillRadioField<FormState> name="workNature" label="אופי העבודה" options={WORK_NATURES} />
-                <PillRadioField<FormState> name="eatingAtWork" label="איפה אתה אוכל בעבודה?" options={EATING_AT_WORK} />
-                <div className="grid grid-cols-2 gap-4">
-                  <PillYesNoField<FormState> name="microwaveAtWork" label="מיקרוגל בעבודה?" />
-                  <PillYesNoField<FormState> name="fridgeAtWork" label="מקרר בעבודה?" />
-                </div>
-              </div>
-            )}
-          </>
+            </RevealPanel>
+          </div>
         );
 
       case 2:
