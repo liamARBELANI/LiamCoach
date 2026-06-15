@@ -88,3 +88,97 @@ describe('computeEnergy', () => {
     expect(mk('אתלטי').tdee).toBe(Math.round(1740 * 1.9));
   });
 });
+
+import { computeFlags, computeInsights } from './insights';
+import type { Client } from '@/types';
+
+function makeClient(overrides: Partial<Client> = {}): Client {
+  const base: Client = {
+    id: 'c1',
+    status: 'completed',
+    createdAt: 0,
+    updatedAt: 0,
+    coachNotes: '',
+    intake: {
+      fullName: 'בדיקה', phone: '0500000000', sex: 'זכר',
+      medicallyFit: 'כן', takesMedication: 'לא',
+      injuriesLimitations: 'אין', athleticBackground: '', sportLastYear: '',
+      whyChangeNow: '', goal: '', daysPerWeek: 3, trainingLocation: 'חדר כושר',
+      cardioPreference: '', specialNotes: '', referralSource: '', whyMe: '',
+      followDuration: '', termsAccepted: true, nutritionDisclaimerAccepted: true,
+    },
+    nutrition: {
+      age: 30, height: 175, weight: 75, hobbies: '', occupationStatus: 'עובד',
+      dailyActivityLevel: '', activityLevel: 'בינוני', sleepWakeTimes: '',
+      sleepHours: 7, mealsPerDay: 3, whenHungry: '', waterPerDay: '',
+      keepsKosher: 'לא', dietType: 'לא', allergies: 'אין', primaryGoal: 'חיטוב',
+      hasBodyScale: 'לא', hasFoodScale: 'לא', hasBlender: 'לא',
+      dailyNutritionRoutine: '', foodsWontEat: '', mustHaveFoods: '',
+      eatingOut: '', snacking: '', supplements: '',
+    },
+  };
+  return {
+    ...base,
+    ...overrides,
+    intake: { ...base.intake, ...(overrides.intake ?? {}) },
+    nutrition: { ...base.nutrition, ...(overrides.nutrition ?? {}) },
+  };
+}
+
+describe('computeFlags', () => {
+  it('no flags for a clean client', () => {
+    expect(computeFlags(makeClient())).toEqual([]);
+  });
+
+  it('flags not-medically-fit (high)', () => {
+    const f = computeFlags(makeClient({ intake: { medicallyFit: 'לא' } as never }));
+    expect(f.map((x) => x.id)).toContain('not-medically-fit');
+    expect(f[0].severity).toBe('high');
+  });
+
+  it('flags injuries / allergies / medication with detail', () => {
+    const f = computeFlags(
+      makeClient({
+        intake: { takesMedication: 'כן', medicationDetails: 'ונטולין', injuriesLimitations: 'כתף' } as never,
+        nutrition: { allergies: 'בוטנים' } as never,
+      }),
+    );
+    const byId = Object.fromEntries(f.map((x) => [x.id, x]));
+    expect(byId.injuries.detail).toBe('כתף');
+    expect(byId.allergies.detail).toBe('בוטנים');
+    expect(byId.medication.detail).toBe('ונטולין');
+    expect(byId.medication.severity).toBe('info');
+  });
+
+  it('sorts high → medium → info', () => {
+    const f = computeFlags(
+      makeClient({
+        intake: { medicallyFit: 'לא', takesMedication: 'כן', medicationDetails: 'x', injuriesLimitations: 'כתף' } as never,
+      }),
+    );
+    expect(f.map((x) => x.severity)).toEqual(['high', 'medium', 'info']);
+  });
+});
+
+describe('computeInsights', () => {
+  it('aggregates bmi + energy + flags + needsAttention', () => {
+    const ins = computeInsights(makeClient());
+    expect(ins.bmi).not.toBeNull();
+    expect(ins.energy).not.toBeNull();
+    expect(ins.needsAttention).toBe(false);
+    expect(ins.missing).toEqual([]);
+  });
+
+  it('reports missing fields and null energy', () => {
+    const ins = computeInsights(
+      makeClient({ intake: { sex: undefined } as never, nutrition: { activityLevel: undefined } as never }),
+    );
+    expect(ins.energy).toBeNull();
+    expect(ins.missing).toEqual(['sex', 'activityLevel']);
+  });
+
+  it('needsAttention true with any flag', () => {
+    const ins = computeInsights(makeClient({ intake: { takesMedication: 'כן', medicationDetails: 'x' } as never }));
+    expect(ins.needsAttention).toBe(true);
+  });
+});
