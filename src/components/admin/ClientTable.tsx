@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 import { formatILMobile } from '@/lib/phone';
@@ -17,10 +17,11 @@ export function ClientTable({
   clients: Client[];
   insightsById: Map<string, ComputedInsights>;
 }) {
+  const navigate = useNavigate();
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 bg-muted/50 text-xs text-muted-foreground">
+        <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">
           <tr>
             <th className="p-3 text-start font-medium">שם</th>
             <th className="p-3 text-start font-medium">טלפון</th>
@@ -36,14 +37,12 @@ export function ClientTable({
           {clients.map((c) => {
             const ins = insightsById.get(c.id);
             return (
-              <tr key={c.id} className="border-t border-border transition-colors hover:bg-muted/30">
+              <tr key={c.id} className="border-t border-border transition-colors hover:bg-muted/30 cursor-pointer" onClick={() => navigate(`/admin/clients/${c.id}`)}>
                 <td className="p-3">
-                  <Link to={`/admin/clients/${c.id}`} className="font-medium hover:text-primary">
-                    {c.intake?.fullName ?? 'ללא שם'}
-                  </Link>
+                  <span className="font-medium">{c.intake?.fullName ?? 'ללא שם'}</span>
                 </td>
-                <td className="p-3" dir="ltr">
-                  {c.intake?.phone ? formatILMobile(c.intake.phone) : '—'}
+                <td className="p-3">
+                  {c.intake?.phone ? <span dir="ltr">{formatILMobile(c.intake.phone)}</span> : '—'}
                 </td>
                 <td className="p-3">{c.nutrition?.primaryGoal ?? '—'}</td>
                 <td className="p-3">

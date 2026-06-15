@@ -123,8 +123,11 @@ export default function AdminDashboard() {
           return nameA.localeCompare(nameB, 'he');
         }
         if (sort === 'bmi-desc' || sort === 'bmi-asc') {
-          const bmiA = insightsById.get(a.id)?.bmi?.value ?? -1;
-          const bmiB = insightsById.get(b.id)?.bmi?.value ?? -1;
+          const bmiA = insightsById.get(a.id)?.bmi?.value ?? null;
+          const bmiB = insightsById.get(b.id)?.bmi?.value ?? null;
+          if (bmiA === null && bmiB === null) return 0;
+          if (bmiA === null) return 1;
+          if (bmiB === null) return -1;
           return sort === 'bmi-asc' ? bmiA - bmiB : bmiB - bmiA;
         }
         return (b.createdAt ?? 0) - (a.createdAt ?? 0); // date-desc default
