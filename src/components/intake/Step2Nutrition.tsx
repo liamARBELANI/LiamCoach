@@ -22,6 +22,7 @@ import { nutritionSchema } from '@/schemas/nutrition';
 import type { NutritionValues } from '@/schemas/nutrition';
 import { isStudying, isWorking } from '@/schemas/nutrition';
 import {
+  ACTIVITY_LEVELS,
   OCCUPATION_STATUSES,
   DIET_TYPES,
   PRIMARY_GOALS,
@@ -126,7 +127,7 @@ export const STEP2_CARDS: CardMeta[] = [
     Icon: Sun,
     headline: 'עוד קצת על השגרה',
     subtitle: 'תחביבים ופעילות כללית',
-    validationFields: ['hobbies', 'dailyActivityLevel'],
+    validationFields: ['hobbies', 'dailyActivityLevel', 'activityLevel'],
   },
   {
     id: 'lifestyle_3',
@@ -346,6 +347,12 @@ export const Step2Nutrition = forwardRef<StepHandle, Step2NutritionProps>(functi
           <>
             <TextareaField<FormState> name="hobbies" label="תחביבים ופעילויות פנאי" />
             <TextField<FormState> name="dailyActivityLevel" label="רמת פעילות יומית (מחוץ לאימונים)" />
+            <PillRadioField<FormState>
+              name="activityLevel"
+              label="איך היית מדרג/ת את רמת הפעילות הכללית שלך?"
+              options={ACTIVITY_LEVELS}
+              required
+            />
           </>
         );
 

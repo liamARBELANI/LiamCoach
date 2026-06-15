@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  ACTIVITY_LEVELS,
   DIET_TYPES,
   EATING_AT_WORK,
   OCCUPATION_STATUSES,
@@ -54,6 +55,10 @@ export const nutritionSchema = z
 
     // אורח חיים (המשך)
     dailyActivityLevel: zOptionalText,
+    activityLevel: z.enum(ACTIVITY_LEVELS, {
+      required_error: 'יש לבחור רמת פעילות',
+      invalid_type_error: 'יש לבחור רמת פעילות',
+    }),
     sleepWakeTimes: zOptionalText,
     sleepHours: zNumber({
       required: 'יש להזין שעות שינה',
