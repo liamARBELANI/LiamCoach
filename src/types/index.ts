@@ -25,10 +25,23 @@ export const PRIMARY_GOALS = [
 ] as const;
 export type PrimaryGoal = (typeof PRIMARY_GOALS)[number];
 
+export const SEXES = ['זכר', 'נקבה'] as const;
+export type Sex = (typeof SEXES)[number];
+
+export const ACTIVITY_LEVELS = [
+  'ישיבה רוב היום',
+  'קל',
+  'בינוני',
+  'גבוה',
+  'אתלטי',
+] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+
 /** Questionnaire 1 — קליטה ואימונים */
 export interface IntakeForm {
   fullName: string;
   phone: string;
+  sex: Sex;
   medicallyFit: YesNo;
   takesMedication: YesNo;
   medicationDetails?: string; // shown only if takesMedication === 'כן'
@@ -67,6 +80,7 @@ export interface NutritionForm {
   microwaveAtWork?: YesNo;
   fridgeAtWork?: YesNo;
   dailyActivityLevel: string;
+  activityLevel: ActivityLevel;
   sleepWakeTimes: string;
   sleepHours: number;
   mealsPerDay: number;
