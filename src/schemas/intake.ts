@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TRAINING_LOCATIONS } from '@/types';
+import { SEXES, TRAINING_LOCATIONS } from '@/types';
 import { isValidILMobile } from '@/lib/phone';
 import { zNumber, zOptionalText, zRequiredText } from './helpers';
 
@@ -15,6 +15,10 @@ export const intakeSchema = z
     fullName: zRequiredText('יש להזין שם מלא', 2),
     phone: zRequiredText('יש להזין מספר פלאפון').refine(isValidILMobile, {
       message: 'מספר פלאפון לא תקין (למשל 050-1234567)',
+    }),
+    sex: z.enum(SEXES, {
+      required_error: 'יש לבחור מין',
+      invalid_type_error: 'יש לבחור מין',
     }),
 
     // רקע רפואי

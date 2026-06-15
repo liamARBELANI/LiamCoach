@@ -14,7 +14,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { intakeSchema } from '@/schemas/intake';
 import type { IntakeValues } from '@/schemas/intake';
-import { TRAINING_LOCATIONS } from '@/types';
+import { SEXES, TRAINING_LOCATIONS } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   TextField,
@@ -49,7 +49,7 @@ export const STEP1_CARDS: CardMeta[] = [
     Icon: User,
     headline: 'ברוכ/ה הבא/ה!',
     subtitle: 'בוא נכיר אחד את השני — קצת פרטים בסיסיים כדי להתחיל',
-    validationFields: ['fullName', 'phone'],
+    validationFields: ['fullName', 'phone', 'sex'],
   },
   {
     id: 'medical_1',
@@ -245,6 +245,12 @@ export const Step1Intake = forwardRef<StepHandle, Step1IntakeProps>(function Ste
               type="tel"
               inputMode="numeric"
               dir="ltr"
+            />
+            <PillRadioField<FormState>
+              name="sex"
+              label="מין"
+              options={SEXES}
+              required
             />
           </>
         );
