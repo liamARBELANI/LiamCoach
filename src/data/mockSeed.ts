@@ -15,6 +15,7 @@ export function buildSeed(): Client[] {
       intake: {
         fullName: 'נועה לוי',
         phone: '052-1234567',
+        sex: 'נקבה',
         medicallyFit: 'כן',
         takesMedication: 'לא',
         injuriesLimitations: 'רגישות קלה בברך ימין.',
@@ -44,6 +45,7 @@ export function buildSeed(): Client[] {
         microwaveAtWork: 'כן',
         fridgeAtWork: 'כן',
         dailyActivityLevel: 'בינונית',
+        activityLevel: 'בינוני',
         sleepWakeTimes: 'הולכת לישון 23:30, קמה 07:00',
         sleepHours: 7,
         mealsPerDay: 3,
@@ -73,6 +75,7 @@ export function buildSeed(): Client[] {
       intake: {
         fullName: 'איתן כהן',
         phone: '054-7654321',
+        sex: 'זכר',
         medicallyFit: 'כן',
         takesMedication: 'כן',
         medicationDetails: 'ונטולין לפי הצורך (אסטמה קלה).',
@@ -106,6 +109,7 @@ export function buildSeed(): Client[] {
         microwaveAtWork: 'כן',
         fridgeAtWork: 'לא',
         dailyActivityLevel: 'גבוהה',
+        activityLevel: 'גבוה',
         sleepWakeTimes: 'נרדם 01:00, קם 08:00',
         sleepHours: 6,
         mealsPerDay: 4,
