@@ -14,6 +14,7 @@ import { PRIMARY_GOALS } from '@/types';
 import { computeInsights } from '@/lib/insights';
 import type { ComputedInsights } from '@/lib/insights';
 import { FlagChip, BmiChip } from '@/components/admin/FlagChip';
+import { ClientTable } from '@/components/admin/ClientTable';
 
 type SortKey = 'date-desc' | 'date-asc' | 'name-asc' | 'bmi-desc' | 'bmi-asc';
 
@@ -230,13 +231,20 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             ) : (
-              <ul className="space-y-3">
-                {filtered.map((c) => (
-                  <li key={c.id}>
-                    <ClientCard client={c} insights={insightsById.get(c.id)} />
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* Mobile: cards */}
+                <ul className="space-y-3 md:hidden">
+                  {filtered.map((c) => (
+                    <li key={c.id}>
+                      <ClientCard client={c} insights={insightsById.get(c.id)} />
+                    </li>
+                  ))}
+                </ul>
+                {/* Desktop: table */}
+                <div className="hidden md:block">
+                  <ClientTable clients={filtered} insightsById={insightsById} />
+                </div>
+              </>
             )}
           </>
         )}
