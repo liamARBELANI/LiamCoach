@@ -79,7 +79,7 @@ describe('computeEnergy', () => {
   });
 
   it('honors every activity multiplier', () => {
-    const mk = (activityLevel: typeof base.activityLevel) =>
+    const mk = (activityLevel: ActivityLevel) =>
       computeEnergy({ ...base, activityLevel, primaryGoal: 'אחר' })!;
     expect(mk('ישיבה רוב היום').tdee).toBe(Math.round(1740 * 1.2));
     expect(mk('קל').tdee).toBe(Math.round(1740 * 1.375));
@@ -90,7 +90,7 @@ describe('computeEnergy', () => {
 });
 
 import { computeFlags, computeInsights } from './insights';
-import type { Client } from '@/types';
+import type { ActivityLevel, Client } from '@/types';
 
 function makeClient(overrides: Partial<Client> = {}): Client {
   const base: Client = {
