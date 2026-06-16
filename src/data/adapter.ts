@@ -15,6 +15,7 @@ export interface ClientRepository {
   findByPhone(phone: string): Promise<Client | null>;
   create(input: CreateClientInput): Promise<Client>;
   update(id: string, patch: Partial<Omit<Client, 'id' | 'createdAt'>>): Promise<Client>;
+  delete(id: string): Promise<void>;
   /** Uploads the goal image and returns its public URL. */
   uploadGoalImage(clientId: string, file: File): Promise<string>;
 }

@@ -59,6 +59,8 @@ export const nutritionSchema = z
       required_error: 'יש לבחור רמת פעילות',
       invalid_type_error: 'יש לבחור רמת פעילות',
     }),
+    sleepTime: z.string().optional(),
+    wakeUpTime: z.string().optional(),
     sleepWakeTimes: zOptionalText,
     sleepHours: zNumber({
       required: 'יש להזין שעות שינה',

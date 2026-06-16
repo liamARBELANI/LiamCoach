@@ -81,7 +81,9 @@ export interface NutritionForm {
   fridgeAtWork?: YesNo;
   dailyActivityLevel: string;
   activityLevel: ActivityLevel;
-  sleepWakeTimes: string;
+  sleepTime?: string;      // HH:MM — go-to-sleep hour
+  wakeUpTime?: string;     // HH:MM — wake-up hour
+  sleepWakeTimes: string;  // kept for backward compat
   sleepHours: number;
   mealsPerDay: number;
   whenHungry: string;
@@ -104,7 +106,14 @@ export interface NutritionForm {
   supplements: string;
 }
 
-export type ClientStatus = 'completed' | 'pending';
+export type ClientStatus = 'completed' | 'pending' | 'archived';
+
+export interface WeightEntry {
+  id: string;
+  date: string;    // YYYY-MM-DD
+  weight: number;  // kg
+  note?: string;
+}
 
 export interface Client {
   id: string;
@@ -114,6 +123,7 @@ export interface Client {
   status: ClientStatus;
   createdAt: number; // epoch ms
   updatedAt: number;
+  weightLog?: WeightEntry[];
 }
 
 export interface CoachUser {

@@ -56,6 +56,17 @@ export interface UpdateClientArgs {
   patch: Partial<Omit<Client, 'id' | 'createdAt'>>;
 }
 
+export function useDeleteClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => clientRepository.delete(id),
+    onSuccess: (_data, id) => {
+      qc.removeQueries({ queryKey: clientKeys.detail(id) });
+      void qc.invalidateQueries({ queryKey: clientKeys.all });
+    },
+  });
+}
+
 export function useUpdateClient() {
   const qc = useQueryClient();
   return useMutation({

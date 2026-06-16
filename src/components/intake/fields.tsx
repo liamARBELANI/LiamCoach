@@ -339,6 +339,38 @@ export function SelectField<T extends FieldValues>({
   );
 }
 
+// ── Time picker field ──────────────────────────────────────────────────────
+export function TimePickerField<T extends FieldValues>({
+  name,
+  label,
+  required,
+}: {
+  name: FieldPath<T>;
+  label: string;
+  required?: boolean;
+}) {
+  const {
+    register,
+    formState: { errors },
+  } = useFormContext<T>();
+  const error = errors[name]?.message as string | undefined;
+  return (
+    <div>
+      <Label htmlFor={name} required={required}>
+        {label}
+      </Label>
+      <Input
+        id={name}
+        type="time"
+        aria-invalid={!!error}
+        className="mt-1.5 text-center"
+        {...register(name)}
+      />
+      <FieldError message={error} />
+    </div>
+  );
+}
+
 // ── Select Number field (Native Picker on iOS) ─────────────────────────────
 export interface SelectNumberFieldProps<T extends FieldValues> {
   name: FieldPath<T>;

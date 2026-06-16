@@ -52,7 +52,7 @@ export function ClientTable({
                   </div>
                 </td>
                 <td className="p-3">
-                  <Badge variant={c.status === 'completed' ? 'success' : 'pending'}>{statusLabel(c.status)}</Badge>
+                  <Badge variant={c.status === 'completed' ? 'success' : c.status === 'archived' ? 'muted' : 'pending'}>{statusLabel(c.status)}</Badge>
                 </td>
                 <td className="p-3 text-muted-foreground">{formatDate(c.createdAt)}</td>
               </tr>

@@ -99,6 +99,13 @@ export function IntakeWizard() {
 
   return (
     <div className="intake-bg flex h-[100dvh] flex-col">
+      {/* Coach brand strip */}
+      <div className="z-10 shrink-0 flex items-center justify-between border-b border-border/30 bg-background/80 px-4 py-1.5 backdrop-blur-md">
+        <span />
+        <span className="text-xs font-semibold tracking-widest text-primary uppercase">
+          Coach Liam Arbelani
+        </span>
+      </div>
       {/* Progress nav — fixed at top, never scrolls */}
       <div className="z-10 shrink-0">
         <ProgressDots

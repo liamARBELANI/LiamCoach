@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -79,6 +80,10 @@ export const firebaseClientRepository: ClientRepository = {
     await updateDoc(ref, { ...patch, updatedAt: Date.now() });
     const snap = await getDoc(ref);
     return toClient(snap.id, snap.data() as Record<string, unknown>);
+  },
+
+  async delete(id) {
+    await deleteDoc(doc(firebaseDb(), COLLECTION, id));
   },
 
   async uploadGoalImage(clientId, file) {

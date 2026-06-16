@@ -81,6 +81,12 @@ export const mockClientRepository: ClientRepository = {
     return delay(updated);
   },
 
+  async delete(id) {
+    const clients = readClients().filter((c) => c.id !== id);
+    writeClients(clients);
+    return delay(undefined);
+  },
+
   async uploadGoalImage(_clientId, file) {
     // In mock mode we keep the image inline as a data URL.
     const dataUrl = await new Promise<string>((resolve, reject) => {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Header } from '@/components/common/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,19 +22,21 @@ type SortKey = 'date-desc' | 'date-asc' | 'name-asc' | 'bmi-desc' | 'bmi-asc';
 
 // ── Stats strip ───────────────────────────────────────────────────────────
 function StatsCards({ clients, attention }: { clients: Client[]; attention: number }) {
-  const total = clients.length;
-  const completed = clients.filter((c) => c.status === 'completed').length;
-  const pending = clients.filter((c) => c.status === 'pending').length;
+  const active = clients.filter((c) => c.status !== 'archived');
+  const completed = active.filter((c) => c.status === 'completed').length;
+  const pending = active.filter((c) => c.status === 'pending').length;
+  const archived = clients.filter((c) => c.status === 'archived').length;
 
   const stats = [
-    { label: 'סה"כ מתאמנים', value: total },
+    { label: 'סה"כ פעילים', value: active.length },
     { label: 'הושלמו', value: completed },
     { label: 'ממתינים', value: pending },
     { label: 'דורשים תשומת לב', value: attention },
+    { label: 'סיימו אימונים', value: archived },
   ];
 
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
       {stats.map(({ label, value }) => (
         <Card key={label}>
           <CardContent className="py-4 text-center">
@@ -48,6 +51,7 @@ function StatsCards({ clients, attention }: { clients: Client[]; attention: numb
 
 // ── Client card (shared between mobile + desktop) ─────────────────────────
 function ClientCard({ client, insights }: { client: Client; insights?: ComputedInsights }) {
+  const isArchived = client.status === 'archived';
   return (
     <Link
       to={`/admin/clients/${client.id}`}
@@ -61,7 +65,7 @@ function ClientCard({ client, insights }: { client: Client; insights?: ComputedI
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <Badge variant={client.status === 'completed' ? 'success' : 'pending'}>
+          <Badge variant={isArchived ? 'muted' : client.status === 'completed' ? 'success' : 'pending'}>
             {statusLabel(client.status)}
           </Badge>
           <span className="text-xs text-muted-foreground">{formatDate(client.createdAt)}</span>
@@ -81,6 +85,38 @@ function ClientCard({ client, insights }: { client: Client; insights?: ComputedI
   );
 }
 
+// ── Archived section ───────────────────────────────────────────────────────
+function ArchivedSection({ clients, insightsById }: { clients: Client[]; insightsById: Map<string, ComputedInsights> }) {
+  const [open, setOpen] = useState(false);
+  if (clients.length === 0) return null;
+  return (
+    <div className="mt-8">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm font-semibold text-muted-foreground hover:bg-muted/70 transition-colors"
+      >
+        <span>סיימו אימונים ({clients.length})</span>
+        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {open && (
+        <div className="mt-3 space-y-3">
+          <ul className="space-y-3 md:hidden">
+            {clients.map((c) => (
+              <li key={c.id}>
+                <ClientCard client={c} insights={insightsById.get(c.id)} />
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
+            <ClientTable clients={clients} insightsById={insightsById} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { data: clients = [], isLoading, isError, error } = useClients();
 
@@ -90,6 +126,10 @@ export default function AdminDashboard() {
     return map;
   }, [clients]);
 
+  // Split active vs archived
+  const activeClients = useMemo(() => clients.filter((c) => c.status !== 'archived'), [clients]);
+  const archivedClients = useMemo(() => clients.filter((c) => c.status === 'archived'), [clients]);
+
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | 'completed' | 'pending'>('');
   const [filterGoal, setFilterGoal] = useState<'' | PrimaryGoal>('');
@@ -98,7 +138,7 @@ export default function AdminDashboard() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return clients
+    return activeClients
       .filter((c) => {
         if (q) {
           const inName = c.intake?.fullName?.toLowerCase()?.includes(q) ?? false;
@@ -127,9 +167,9 @@ export default function AdminDashboard() {
           if (bmiB === null) return -1;
           return sort === 'bmi-asc' ? bmiA - bmiB : bmiB - bmiA;
         }
-        return (b.createdAt ?? 0) - (a.createdAt ?? 0); // date-desc default
+        return (b.createdAt ?? 0) - (a.createdAt ?? 0);
       });
-  }, [clients, search, filterStatus, filterGoal, filterFlagged, sort, insightsById]);
+  }, [activeClients, search, filterStatus, filterGoal, filterFlagged, sort, insightsById]);
 
   return (
     <div className="min-h-dvh">
@@ -162,7 +202,7 @@ export default function AdminDashboard() {
             {clients.length > 0 && (
               <StatsCards
                 clients={clients}
-                attention={clients.filter((c) => insightsById.get(c.id)?.needsAttention).length}
+                attention={activeClients.filter((c) => insightsById.get(c.id)?.needsAttention).length}
               />
             )}
 
@@ -223,16 +263,15 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            {/* List */}
+            {/* Active list */}
             {filtered.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  {clients.length === 0 ? 'אין מתאמנים עדיין' : 'לא נמצאו תוצאות'}
+                  {activeClients.length === 0 ? 'אין מתאמנים פעילים עדיין' : 'לא נמצאו תוצאות'}
                 </CardContent>
               </Card>
             ) : (
               <>
-                {/* Mobile: cards */}
                 <ul className="space-y-3 md:hidden">
                   {filtered.map((c) => (
                     <li key={c.id}>
@@ -240,12 +279,14 @@ export default function AdminDashboard() {
                     </li>
                   ))}
                 </ul>
-                {/* Desktop: table */}
                 <div className="hidden md:block">
                   <ClientTable clients={filtered} insightsById={insightsById} />
                 </div>
               </>
             )}
+
+            {/* Archived section */}
+            <ArchivedSection clients={archivedClients} insightsById={insightsById} />
           </>
         )}
       </main>

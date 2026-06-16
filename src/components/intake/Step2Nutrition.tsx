@@ -35,6 +35,7 @@ import {
   SelectNumberField,
   PillRadioField,
   PillYesNoField,
+  TimePickerField,
 } from './fields';
 import { CardShell } from './CardShell';
 import type { StepHandle } from './StickyActionBar';
@@ -134,7 +135,11 @@ export const STEP2_CARDS: CardMeta[] = [
     Icon: Moon,
     headline: 'זמן מנוחה',
     subtitle: 'שינה טובה היא מפתח להצלחה',
-    validationFields: ['sleepWakeTimes', 'sleepHours'],
+    validationFields: ['sleepTime', 'wakeUpTime', 'sleepHours'],
+    validate: (data) =>
+      !data.wakeUpTime || !data.sleepTime
+        ? { sleepTime: 'יש לבחור שעת שינה ושעת השכמה' }
+        : null,
   },
   {
     id: 'meals',
@@ -228,6 +233,19 @@ export const Step2Nutrition = forwardRef<StepHandle, Step2NutritionProps>(functi
 
   const occupationStatus = useWatch({ control: methods.control, name: 'occupationStatus' }) as string | undefined;
   const primaryGoal = useWatch({ control: methods.control, name: 'primaryGoal' }) as string | undefined;
+  const wakeUpTime = useWatch({ control: methods.control, name: 'wakeUpTime' }) as string | undefined;
+  const sleepTime = useWatch({ control: methods.control, name: 'sleepTime' }) as string | undefined;
+
+  useEffect(() => {
+    if (!wakeUpTime || !sleepTime) return;
+    const [wh, wm] = wakeUpTime.split(':').map(Number);
+    const [sh, sm] = sleepTime.split(':').map(Number);
+    const diff = ((wh * 60 + wm) - (sh * 60 + sm) + 1440) % 1440;
+    const hours = Math.round((diff / 60) * 10) / 10;
+    methods.setValue('sleepHours', hours, { shouldValidate: true });
+    methods.setValue('sleepWakeTimes', `${sleepTime} - ${wakeUpTime}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wakeUpTime, sleepTime]);
 
   const card = STEP2_CARDS[cardIdx];
   const isLastCard = cardIdx === STEP2_CARDS.length - 1;
@@ -356,13 +374,31 @@ export const Step2Nutrition = forwardRef<StepHandle, Step2NutritionProps>(functi
           </>
         );
 
-      case 3:
+      case 3: {
+        const computedHours = (() => {
+          if (!wakeUpTime || !sleepTime) return null;
+          const [wh, wm] = wakeUpTime.split(':').map(Number);
+          const [sh, sm] = sleepTime.split(':').map(Number);
+          const diff = ((wh * 60 + wm) - (sh * 60 + sm) + 1440) % 1440;
+          return Math.round((diff / 60) * 10) / 10;
+        })();
         return (
           <div className="space-y-5">
-            <TextField<FormState> name="sleepWakeTimes" label="שעות שינה והשכמה בדרך כלל" />
-            <SelectNumberField<FormState> name="sleepHours" label="כמה שעות אתה ישן בלילה?" required unit="שעות" min={1} max={24} />
+            <TimePickerField<FormState> name="sleepTime" label="שעת שינה" required />
+            <TimePickerField<FormState> name="wakeUpTime" label="שעת השכמה" required />
+            {computedHours !== null && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-2xl border border-primary/20 bg-primary/5 py-5 text-center"
+              >
+                <p className="text-4xl font-bold text-primary">{computedHours}</p>
+                <p className="mt-1 text-sm text-muted-foreground">שעות שינה סה״כ</p>
+              </motion.div>
+            )}
           </div>
         );
+      }
 
       case 4:
         return (
